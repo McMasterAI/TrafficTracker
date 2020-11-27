@@ -5,8 +5,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from utils.datasets import letterbox
-from utils.general import non_max_suppression, make_divisible, scale_coords
+from yolov5.utils.datasets import letterbox
+from yolov5.utils.general import non_max_suppression, make_divisible, scale_coords
 
 
 def autopad(k, p=None):  # kernel, padding
