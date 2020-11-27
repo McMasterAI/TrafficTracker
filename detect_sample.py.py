@@ -1,3 +1,6 @@
+### In order to run this test you must convert add the data, 
+### inference and yolo5s.pt to the directory of this file
+
 import argparse
 import os
 import shutil
@@ -9,7 +12,9 @@ import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
 
-
+### The two lines below, import sys AND sys.path.insert(0,'./yolov5') , are necessary in order
+### to avoid modules not found errors.
+### https://github.com/ultralytics/yolov5/issues/353
 import sys
 sys.path.insert(0, './yolov5')
 
