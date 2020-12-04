@@ -1,5 +1,4 @@
 import time
-import numpy as np
 from io import BytesIO
 
 from picamera import PiCamera, PiCameraCircularIO
