@@ -1,3 +1,4 @@
+import argparse
 import time
 from io import BytesIO
 
@@ -47,7 +48,13 @@ class Consumer(Thread):
 
 
 if __name__ == "__main__":
-    picam = ThreadedCamera(100, 1280, 720)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--fps', type=int, default=10, help='Camera framerate')
+    parser.add_argument('-x', type=int, default=1280, help='X resolution')
+    parser.add_argument('-y', type=int, default=720, help='Y resolution')
+    opt = parser.parse_args()
+
+    picam = ThreadedCamera(opt.fps, opt.x, opt.y)
     consumer = Consumer(picam)
     picam.start()
     consumer.start()
