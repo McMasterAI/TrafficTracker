@@ -1,9 +1,9 @@
 # Deep SORT
 numpy
-sklearn==0.22.2
+sklearn
 
 # YOLOv5
-torch
+torch==0.7.0
 opencv-python
 pillow
 tqdm
