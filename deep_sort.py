@@ -6,13 +6,13 @@ import tensorflow as tf
 from yolov3.utils import Load_Yolo_model, image_preprocess, postprocess_boxes, nms, draw_bbox, read_class_names
 from yolov3.configs import *
 import time
+import argparse
 
 from deep_sort import nn_matching
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
 from deep_sort import generate_detections as gdet
 
-video_path   = "./IMAGES/test.mp4"
 
 def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, CLASSES=YOLO_COCO_CLASSES, score_threshold=0.3, iou_threshold=0.45, rectangle_colors='', Track_only = []):
     # Definition of the parameters
@@ -139,5 +139,23 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--video_path", help="path to input video",
+        type=str, default = "./IMAGES/test.mp4")
+    parser.add_argument("--output_path", help="where the outputs will be stored",
+        type=str, default = "detection.mp4")
+    parser.add_argument("--input_size", help="image input size",
+        type=int, default = YOLO_INPUT_SIZE)
+    parser.add_argument("--no_show", help="if mentioned, output images will not be shown, called without any argument",
+        action="store_false",default = True)
+    parser.add_argument("--iou_threshold", help="boolean for displaying output image",
+        type=float, default = 0.1)
+    parser.add_argument("--score_threshold", help="threshold for declaring a detection",
+        type=float, default = 0.3)
+    args = parser.parse_args()
+    print('results')
+    print(args.video_path, args.output_path, args.input_size,args.no_show,args.iou_threshold,args.score_threshold)
     yolo = Load_Yolo_model()
-    Object_tracking(yolo, video_path, "detection.mp4", input_size=YOLO_INPUT_SIZE, show=True, iou_threshold=0.1, rectangle_colors=(255,0,0), Track_only = ["person"])
+    Object_tracking(yolo, args.video_path, args.output_path, 
+        input_size=args.input_size, show=args.no_show, iou_threshold=args.iou_threshold, 
+        score_threshold=args.score_threshold, rectangle_colors=(255,0,0), Track_only = ["person"])
