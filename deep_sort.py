@@ -1,13 +1,3 @@
-#================================================================
-#
-#   File name   : object_tracker.py
-#   Author      : PyLessons
-#   Created date: 2020-09-17
-#   Website     : https://pylessons.com/
-#   GitHub      : https://github.com/pythonlessons/TensorFlow-2.x-YOLOv3
-#   Description : code to track detected object from video or webcam
-#
-#================================================================
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import cv2
@@ -31,17 +21,12 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
     
     #initialize deep sort object
     model_filename = 'model_data/mars-small128.pb'
-
-    #encoder is a functions for extracting the patch given a specific box, out of an image 
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
-
-    #metric should be changeable because there is a story on the story board about this
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
     tracker = Tracker(metric)
 
     times, times_2 = [], []
 
-    #vid is a openCV object for reading a video frame by frame
     if video_path:
         vid = cv2.VideoCapture(video_path) # detect on video
     else:
@@ -51,30 +36,29 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
     width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(vid.get(cv2.CAP_PROP_FPS))
-    codec = cv2.VideoWriter_fourcc(*'XVID') #a 4 letter video code for compression and data formats, by codec it means it is both a compressor and decompressor 
+    codec = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter(output_path, codec, fps, (width, height)) # output_path must be .mp4
 
-    #NUM_CLASS is a dictionary of ID's and classnames
     NUM_CLASS = read_class_names(CLASSES)
     key_list = list(NUM_CLASS.keys()) 
     val_list = list(NUM_CLASS.values())
     while True:
-        _, frame = vid.read() #Grabs, decodes and returns the next video frame, returns boolean and frame, false if failure or video end
+        _, frame = vid.read()
 
         try:
-            original_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #takes an image and recolor it
+            original_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             original_frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
         except:
             break
         
-        image_data = image_preprocess(np.copy(original_frame), [input_size, input_size]) #resize and pad to the desired shape, scale pixels by 255
+        image_data = image_preprocess(np.copy(original_frame), [input_size, input_size])
         #image_data = tf.expand_dims(image_data, 0)
         image_data = image_data[np.newaxis, ...].astype(np.float32)
 
         t1 = time.time()
         if YOLO_FRAMEWORK == "tf":
             pred_bbox = Yolo.predict(image_data)
-        elif YOLO_FRAMEWORK == "trt": #tensorRT is an SDK for inference optimization, though GPU's, neural network optimizations and parallel computing 
+        elif YOLO_FRAMEWORK == "trt":
             batched_input = tf.constant(image_data)
             result = Yolo(batched_input)
             pred_bbox = []
@@ -107,20 +91,18 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
         features = np.array(encoder(original_frame, boxes))
         print(boxes,names,scores,features)
 
-        #Detection is an object that does exactly what it sounds/looks like
-        #zip basically combines multiple lists into a single iterator, e.g. zip([1,2], [3,4], [5,6]) -> [(1,3,5), (2,4,6)]
         detections = [Detection(bbox, score, class_name, feature) for bbox, score, class_name, feature in zip(boxes, scores, names, features)]
 
         # Pass detections to the deepsort object and obtain the track information.
-        tracker.predict() #propagate track state distributions one time step forward, by applying a Kalman filter prediction step to each element in detection 
-        tracker.update(detections) #perform measurement update and track management, by updating the trackset and distance metric
+        tracker.predict()
+        tracker.update(detections)
 
         # Obtain info from the tracks
-        tracked_bboxes = [] #element is composed of bbox, track_id, and index in the classlist
+        tracked_bboxes = []
         for track in tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 5:
                 continue 
-            bbox = track.to_tlbr() # Get the corrected/predicted bounding box, in format `(min x, miny, max x,max y)`
+            bbox = track.to_tlbr() # Get the corrected/predicted bounding box
             class_name = track.get_class() #Get the class name of particular object
             tracking_id = track.track_id # Get the ID for the particular track
             index = key_list[val_list.index(class_name)] # Get predicted object index by object name
@@ -130,8 +112,8 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
         image = draw_bbox(original_frame, tracked_bboxes, CLASSES=CLASSES, tracking=True)
 
         t3 = time.time()
-        times.append(t2-t1) #time to predict the image
-        times_2.append(t3-t1) #time to process the image
+        times.append(t2-t1)
+        times_2.append(t3-t1)
         
         times = times[-20:]
         times_2 = times_2[-20:]
@@ -156,6 +138,6 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
             
     cv2.destroyAllWindows()
 
-
-yolo = Load_Yolo_model()
-Object_tracking(yolo, video_path, "detection.mp4", input_size=YOLO_INPUT_SIZE, show=True, iou_threshold=0.1, rectangle_colors=(255,0,0), Track_only = ["person"])
+if __name__ == "__main__":
+    yolo = Load_Yolo_model()
+    Object_tracking(yolo, video_path, "detection.mp4", input_size=YOLO_INPUT_SIZE, show=True, iou_threshold=0.1, rectangle_colors=(255,0,0), Track_only = ["person"])
