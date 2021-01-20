@@ -1,6 +1,6 @@
 from yolov5.utils.torch_utils import select_device, time_synchronized
 from yolov5.utils.general import check_img_size, non_max_suppression, scale_coords, strip_optimizer, set_logging
-from yolov5.utils.datasets import LoadStreams, LoadImages
+from yolov5.utils.datasets import LoadStreams, LoadImages, letterbox
 from yolov5.models.experimental import attempt_load
 import yolov5
 import argparse
@@ -141,7 +141,7 @@ def detect(save_img=False):
 
     for _, img, im0s, _ in yolov5.dataset:
         # path is the path of the image file, img is the formatted image, im0s is the original image from cv2.imread(path) in BGR format
-        yolo_predict(yolov5, img, im0s)
+        print(yolo_predict(yolov5, img, im0s))
 
     print('Done. (%.3fs)' % (time.time() - t0))
 

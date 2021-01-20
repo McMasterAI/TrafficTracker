@@ -3,8 +3,9 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import cv2
 import numpy as np
 import tensorflow as tf
-from yolov3.utils import Load_Yolo_model, image_preprocess, postprocess_boxes, nms, draw_bbox, read_class_names
-from yolov3.configs import *
+from detections import Load_Yolo_Model,yolo_predict
+from yolov5.utils.datasets import letterbox
+
 import time
 import argparse
 
@@ -14,6 +15,13 @@ from deep_sort.tracker import Tracker
 from deep_sort import generate_detections as gdet
 
 # Helpers
+def read_class_names(class_file_name):
+    # loads class name from a file
+    names = {}
+    with open(class_file_name, 'r') as data:
+        for ID, name in enumerate(data):
+            names[ID] = name.strip('\n')
+    return names
 def efficiency_statistics(detection_times,tracking_times):
     ms = sum(detection_times)/len(detection_times)*1000
     fps = 1000 / ms
@@ -42,13 +50,13 @@ def get_video_capture_info(vid):
     fps = int(vid.get(cv2.CAP_PROP_FPS))
     return width,height,fps
 
-def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, CLASSES=YOLO_COCO_CLASSES, score_threshold=0.3, iou_threshold=0.45, rectangle_colors='', Track_only = []):
+def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show=False, score_threshold=0.3, iou_threshold=0.45, rectangle_colors='', Track_only = []):
     # Definition of the parameters
     max_cosine_distance = 0.7
     nn_budget = None
     
     #initialize deep sort object
-    model_filename = 'model_data/mars-small128.pb'
+    model_filename = 'models/mars-small128.pb'
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
     tracker = Tracker(metric)
@@ -69,53 +77,23 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
     detection_times, tracking_times = [], []
 
     while True:
-        _, frame = vid.read()
+        _, frame = vid.read() #BGR
 
-        try:
-            original_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            original_frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
-        except:
-            break
+        # create the original_frame for display purposes (draw_bboxes)
+        original_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        original_frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
+
+        # preprocessing found in datasets.py
+        img = letterbox(frame, new_shape=(height, width))[0]
+        # Convert
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img = np.ascontiguousarray(img)
         
-        image_data = image_preprocess(np.copy(original_frame), [input_size, input_size])
-        #image_data = tf.expand_dims(image_data, 0)
-        image_data = image_data[np.newaxis, ...].astype(np.float32)
-
         t1 = time.time()
-        if YOLO_FRAMEWORK == "tf":
-            pred_bbox = Yolo.predict(image_data)
-        elif YOLO_FRAMEWORK == "trt":
-            batched_input = tf.constant(image_data)
-            result = Yolo(batched_input)
-            pred_bbox = []
-            for key, value in result.items():
-                value = value.numpy()
-                pred_bbox.append(value)
-        
-        #t1 = time.time()
-        #pred_bbox = Yolo.predict(image_data)
+        boxes, names, scores = yolo_predict(yolo,img, frame)
         t2 = time.time()
-        
-        pred_bbox = [tf.reshape(x, (-1, tf.shape(x)[-1])) for x in pred_bbox]
-        pred_bbox = tf.concat(pred_bbox, axis=0)
 
-        bboxes = postprocess_boxes(pred_bbox, original_frame, input_size, score_threshold)
-        bboxes = nms(bboxes, iou_threshold, method='nms')
-
-        # extract bboxes to boxes (x, y, width, height), scores and names
-        boxes, scores, names = [], [], []
-        for bbox in bboxes:
-            if len(Track_only) !=0 and NUM_CLASS[int(bbox[5])] in Track_only or len(Track_only) == 0:
-                boxes.append([bbox[0].astype(int), bbox[1].astype(int), bbox[2].astype(int)-bbox[0].astype(int), bbox[3].astype(int)-bbox[1].astype(int)])
-                scores.append(bbox[4])
-                names.append(NUM_CLASS[int(bbox[5])])
-
-        # Obtain all the detections for the given frame.
-        boxes = np.array(boxes) 
-        names = np.array(names)
-        scores = np.array(scores)
         features = np.array(encoder(original_frame, boxes))
-
         # Pass detections to the deepsort object and obtain the track information.
         detections = [Detection(bbox, score, class_name, feature) for bbox, score, class_name, feature in zip(boxes, scores, names, features)]
         tracker.predict()
@@ -154,11 +132,11 @@ def Object_tracking(Yolo, video_path, output_path, input_size=416, show=False, C
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--video_path", help="path to input video",
-        type=str, default = "./IMAGES/test.mp4")
+        type=str, default = "inference/test.mp4")
     parser.add_argument("--output_path", help="where the outputs will be stored",
         type=str, default = "detection.mp4")
     parser.add_argument("--input_size", help="image input size",
-        type=int, default = YOLO_INPUT_SIZE)
+        type=int, default = 416)
     parser.add_argument("--no_show", help="if mentioned, output images will not be shown, called without any argument",
         action="store_false",default = True)
     parser.add_argument("--iou_threshold", help="boolean for displaying output image",
@@ -168,7 +146,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print('results')
     print(args.video_path, args.output_path, args.input_size,args.no_show,args.iou_threshold,args.score_threshold)
-    yolo = Load_Yolo_model()
-    Object_tracking(yolo, args.video_path, args.output_path, 
-        input_size=args.input_size, show=args.no_show, iou_threshold=args.iou_threshold, 
+    yolo = Load_Yolo_Model()
+    Object_tracking(yolo, args.video_path, args.output_path, CLASSES = "models/coco/coco.names",
+        input_size=args.input_size, show=args.no_show, iou_threshold=args.iou_threshold,
         score_threshold=args.score_threshold, rectangle_colors=(255,0,0), Track_only = ["person"])
