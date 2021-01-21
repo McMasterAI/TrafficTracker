@@ -2,6 +2,7 @@
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Issues][issues-shield]][issues-url]
+[![CircleCI][circleci-url]][circleci-shield]
 [![MIT License][license-shield]][license-url]
 
 <div align="center">A street traffic counter that aligns with the values of the Beasley Neighbourhood providing efficient and ethical modelling of how people engage and interact within a given public space.
@@ -50,5 +51,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 [contributors-url]: https://github.com/McMasterAI/BNA-traffic-mapper/graphs/contributors
 [issues-shield]: https://img.shields.io/github/issues/McMasterAI/BNA-traffic-mapper.svg
 [issues-url]: https://github.com/McMasterAI/BNA-traffic-mapper/issues
+[circleci-url]: https://circleci.com/gh/McMasterAI/BNA-traffic-mapper.svg?style=shield
+[circleci-shield]: https://circleci.com/gh/McMasterAI/BNA-traffic-mapper
 [license-shield]: https://img.shields.io/github/license/McMasterAI/BNA-traffic-mapper.svg
 [license-url]: https://github.com/McMasterAI/BNA-traffic-mapper/blob/master/LICENSE.txt
