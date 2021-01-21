@@ -1,12 +1,13 @@
+# BNA-traffic-mapper
+
 [![Contributors][contributors-shield]][contributors-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
 
-# BNA-traffic-mapper
 <div align="center">A street traffic counter that aligns with the values of the Beasley Neighbourhood providing efficient and ethical modelling of how people engage and interact within a given public space.
 </div>
 
-### Table of Contents
+## Table of Contents
 1. [About the Project](#about-the-project)\
     a. [Built With](#built-with)
 3. [Getting Started](#getting-started)\
