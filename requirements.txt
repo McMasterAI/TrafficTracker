@@ -3,7 +3,8 @@ numpy
 sklearn
 
 # YOLOv5
-torch==0.7.0
+torch
+torchvision==0.7.0
 opencv-python
 pillow
 tqdm
