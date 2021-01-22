@@ -23,7 +23,7 @@ import sys
 sys.path.insert(0, './yolov5')
 
 
-def Load_Yolo_Model(device=select_device(''), weights='models/yolov5s.pt', imgsz=640):
+def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', imgsz=640):
     """Save a yolo model object.
 
     Args:
@@ -45,8 +45,8 @@ def Load_Yolo_Model(device=select_device(''), weights='models/yolov5s.pt', imgsz
         yolov5, 'module') else yolov5.names)
 
     yolov5.augment = False
-    yolov5.conf_thres = 0.25
-    yolov5.iou_thres = 0.45
+    yolov5.conf_thres = conf_thres
+    yolov5.iou_thres = iou_thres
     yolov5.classes = None
     yolov5.agnostic_nms = False
 
@@ -141,8 +141,6 @@ def detect(save_img=False):
 
     for _, img, im0s, _ in yolov5.dataset:
         # path is the path of the image file, img is the formatted image, im0s is the original image from cv2.imread(path) in BGR format
-        print('im0 shape',im0s.shape)
-        print('img shape',img.shape)
         print(yolo_predict(yolov5, img, im0s))
 
     print('Done. (%.3fs)' % (time.time() - t0))
