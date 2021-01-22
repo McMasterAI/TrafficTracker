@@ -10,7 +10,6 @@ pillow
 tqdm
 matplotlib
 PyYAML
-torchvision
 
 # Flask
 flask
