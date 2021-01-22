@@ -27,63 +27,13 @@ def read_class_names(class_file_name):
             names[ID] = name.strip('\n')
     return names
 
-
-def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
-    NUM_CLASS = read_class_names(CLASSES)
-    num_classes = len(NUM_CLASS)
-    image_h, image_w, _ = image.shape
-    hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]
-    #print("hsv_tuples", hsv_tuples)
-    colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
-    colors = list(
-        map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), colors))
-    random.seed(0)
-    random.shuffle(colors)
-    random.seed(None)
-
-    for i, bbox in enumerate(bboxes):
-        coor = np.array(bbox[:4], dtype=np.int32)
-        score = bbox[4]
-        class_ind = int(bbox[5])
-        print('rectangle_colors', rectangle_colors, rectangle_colors if rectangle_colors != '' else colors[class_ind])
-        bbox_color = rectangle_colors if rectangle_colors != '' else colors[class_ind]
-        bbox_thick = int(0.6 * (image_h + image_w) / 1000)
-        if bbox_thick < 1:
-            bbox_thick = 1
-        fontScale = 0.75 * bbox_thick
-        (x1, y1), (x2, y2) = (coor[0], coor[1]), (coor[2], coor[3])
-
-        # put object rectangle
-        cv2.rectangle(image, (x1, y1), (x2, y2), bbox_color, bbox_thick*2)
-
-        if show_label:
-            # get text label
-            score_str = " {:.2f}".format(score) if show_confidence else ""
-
-            if tracking:
-                score_str = " "+str(score)
-
-            try:
-                label = "{}".format(NUM_CLASS[class_ind]) + score_str
-            except KeyError:
-                print(
-                    "You received KeyError, this might be that you are trying to use yolo original weights")
-                print(
-                    "while using custom classes, if using custom model in configs.py set YOLO_CUSTOM_WEIGHTS = True")
-
-            # get text size
-            (text_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                                                  fontScale, thickness=bbox_thick)
-            # put filled text rectangle
-            cv2.rectangle(image, (x1, y1), (x1 + text_width, y1 -
-                                            text_height - baseline), bbox_color, thickness=cv2.FILLED)
-
-            # put text above rectangle
-            cv2.putText(image, label, (x1, y1-4), cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                        fontScale, Text_colors, bbox_thick, lineType=cv2.LINE_AA)
-            print('label',label, score)
-    return image
-
+def preprocess_image(img0, input_size):
+    # preprocessing found in datasets.py
+    img = letterbox(img0, new_shape=input_size)[0]
+    # Convert
+    img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+    img = np.ascontiguousarray(img)
+    return img
 
 def efficiency_statistics(detection_times, tracking_times):
     ms = sum(detection_times)/len(detection_times)*1000
@@ -106,22 +56,63 @@ def get_tracker_info(tracker, val_list, key_list):
         tracked_bboxes.append(bbox.tolist() + [tracking_id, index])
     return tracked_bboxes
 
-
-def draw_image(original_frame, tracked_bboxes, CLASSES, fps=None):
-    image = draw_bbox(original_frame, tracked_bboxes,
-                      CLASSES=CLASSES, tracking=True)
-    if fps != None:
-        image = cv2.putText(image, "Time: {:.1f} FPS".format(
-            fps), (0, 30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 2)
-    return image
-
-
 def get_video_capture_info(vid):
     # by default VideoCapture returns float instead of int
     width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = int(vid.get(cv2.CAP_PROP_FPS))
     return width, height, fps
+
+
+def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
+    NUM_CLASS = read_class_names(CLASSES)
+    num_classes = len(NUM_CLASS)
+    image_h, image_w, _ = image.shape
+    hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]
+    #print("hsv_tuples", hsv_tuples)
+    colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
+    colors = list(
+        map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), colors))
+    random.seed(0)
+    random.shuffle(colors)
+    random.seed(None)
+
+    for i, bbox in enumerate(bboxes):
+        coor = np.array(bbox[:4], dtype=np.int32)
+        score = bbox[4]
+        class_ind = int(bbox[5])
+        bbox_color = rectangle_colors if rectangle_colors != '' else colors[class_ind]
+        bbox_thick = int(0.6 * (image_h + image_w) / 1000)
+        if bbox_thick < 1:
+            bbox_thick = 1
+        fontScale = 0.75 * bbox_thick
+        (x1, y1), (x2, y2) = (coor[0], coor[1]), (coor[2], coor[3])
+
+        # put object rectangle
+        cv2.rectangle(image, (x1, y1), (x2, y2), bbox_color, bbox_thick*2)
+
+        if show_label:
+            # get text label
+            score_str = " {:.2f}".format(score) if show_confidence else ""
+            if tracking:
+                score_str = " "+str(score)
+            try:
+                label = "{}".format(NUM_CLASS[class_ind]) + score_str
+            except KeyError:
+                print(
+                    "You received KeyError, this might be that you are trying to use yolo original weights")
+                print(
+                    "while using custom classes, if using custom model in configs.py set YOLO_CUSTOM_WEIGHTS = True")
+            # get text size
+            (text_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                                                  fontScale, thickness=bbox_thick)
+            # put filled text rectangle
+            cv2.rectangle(image, (x1, y1), (x1 + text_width, y1 -
+                                            text_height - baseline), bbox_color, thickness=cv2.FILLED)
+            # put text above rectangle
+            cv2.putText(image, label, (x1, y1-4), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                        fontScale, Text_colors, bbox_thick, lineType=cv2.LINE_AA)
+    return image
 
 
 def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show=False,  rectangle_colors=''):
@@ -153,26 +144,19 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
 
     while True:
         _, frame = vid.read()  # BGR
-
         # create the original_frame for display purposes (draw_bboxes)
         original_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         original_frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
-        print('frame shape', frame.shape)
         # preprocessing found in datasets.py
-        img = letterbox(frame, new_shape=input_size)[0]
-        # Convert
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-        img = np.ascontiguousarray(img)
-        print('img shape', img.shape)
+        img = preprocess_image(frame, input_size)
+
         t1 = time.time()
-        boxes, classes, scores = yolo_predict(yolo, img, frame)
+        boxes, class_inds, scores = yolo_predict(yolo, img, frame)
         t2 = time.time()
         names = []
-        for clss in classes:
+        for clss in class_inds:
             names.append(NUM_CLASS[clss])
         features = np.array(encoder(original_frame, boxes))
-        for bbox, score, class_name, feature in zip(boxes, scores, names, features):
-            print(bbox, score, class_name)
         # Pass detections to the deepsort object and obtain the track information.
         detections = [Detection(bbox, score, class_name, feature) for bbox,
                       score, class_name, feature in zip(boxes, scores, names, features)]
@@ -218,18 +202,17 @@ if __name__ == "__main__":
                         type=str, default="inference/test.mp4")
     parser.add_argument("--output_path", help="where the outputs will be stored",
                         type=str, default="detection.mp4")
+    parser.add_argument("--label_names_path", help="path to the names of the labels", 
+                        type=str, default="models/coco/coco.names")
     parser.add_argument("--input_size", help="image input size",
                         type=int, default=640)
     parser.add_argument("--no_show", help="if mentioned, output images will not be shown, called without any argument",
                         action="store_false", default=True)
     parser.add_argument("--iou_threshold", help="boolean for displaying output image",
-                        type=float, default=0.2)
+                        type=float, default=0.1)
     parser.add_argument("--conf_threshold", help="threshold for declaring a detection",
-                        type=float, default=0.3)
+                        type=float, default=0.25)
     args = parser.parse_args()
-    print('results')
-    print(args.video_path, args.output_path, args.input_size,
-          args.no_show, args.iou_threshold, args.conf_threshold)
     yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.input_size)
-    Object_tracking(yolo, args.video_path, args.output_path, CLASSES="models/coco/coco.names",
+    Object_tracking(yolo, args.video_path, args.output_path, CLASSES=args.label_names_path,
                     input_size=args.input_size, show=args.no_show)

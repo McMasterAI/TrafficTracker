@@ -79,7 +79,7 @@ def yolo_predict(yolov5, img, im0s):
         pred, yolov5.conf_thres, yolov5.iou_thres, classes=yolov5.classes, agnostic=yolov5.agnostic_nms)
     t2 = time_synchronized()
 
-    boxes, classes, scores = [], [], []
+    boxes, class_inds, scores = [], [], []
 
     # Process detections
     for _, det in enumerate(pred):  # detections per image
@@ -102,13 +102,13 @@ def yolo_predict(yolov5, img, im0s):
                         ).view(-1).tolist()  # xywh
 
                 boxes.append(xywh)
-                classes.append(int(cls.item()))
+                class_inds.append(int(cls.item()))
                 scores.append(conf.item())
 
         # Print time (inference + NMS)
         print('%sDone. (%.3fs)' % (s, t2 - t1))
 
-    return boxes, classes, scores
+    return boxes, class_inds, scores
 
 
 def detect(save_img=False):
