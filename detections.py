@@ -23,7 +23,7 @@ import sys
 sys.path.insert(0, './yolov5')
 
 
-def Load_Yolo_Model(device=select_device(''), weights='models/yolov5s.pt', imgsz=640):
+def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', imgsz=640):
     """Save a yolo model object.
 
     Args:
@@ -45,8 +45,8 @@ def Load_Yolo_Model(device=select_device(''), weights='models/yolov5s.pt', imgsz
         yolov5, 'module') else yolov5.names)
 
     yolov5.augment = False
-    yolov5.conf_thres = 0.25
-    yolov5.iou_thres = 0.45
+    yolov5.conf_thres = conf_thres
+    yolov5.iou_thres = iou_thres
     yolov5.classes = None
     yolov5.agnostic_nms = False
 
@@ -79,7 +79,7 @@ def yolo_predict(yolov5, img, im0s):
         pred, yolov5.conf_thres, yolov5.iou_thres, classes=yolov5.classes, agnostic=yolov5.agnostic_nms)
     t2 = time_synchronized()
 
-    boxes, names, scores = [], [], []
+    boxes, class_inds, scores = [], [], []
 
     # Process detections
     for _, det in enumerate(pred):  # detections per image
@@ -102,13 +102,13 @@ def yolo_predict(yolov5, img, im0s):
                         ).view(-1).tolist()  # xywh
 
                 boxes.append(xywh)
-                names.append(cls)
-                scores.append(conf)
+                class_inds.append(int(cls.item()))
+                scores.append(conf.item())
 
         # Print time (inference + NMS)
         print('%sDone. (%.3fs)' % (s, t2 - t1))
 
-    return boxes, names, scores
+    return boxes, class_inds, scores
 
 
 def detect(save_img=False):
@@ -141,7 +141,7 @@ def detect(save_img=False):
 
     for _, img, im0s, _ in yolov5.dataset:
         # path is the path of the image file, img is the formatted image, im0s is the original image from cv2.imread(path) in BGR format
-        yolo_predict(yolov5, img, im0s)
+        print(yolo_predict(yolov5, img, im0s))
 
     print('Done. (%.3fs)' % (time.time() - t0))
 
@@ -178,7 +178,6 @@ if __name__ == '__main__':
     parser.add_argument('--update', action='store_true',
                         help='update all models')
     opt = parser.parse_args()
-    print(opt)
 
     with torch.no_grad():
         if opt.update:  # update all models (to fix SourceChangeWarning)
