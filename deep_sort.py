@@ -45,6 +45,7 @@ def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Tex
         coor = np.array(bbox[:4], dtype=np.int32)
         score = bbox[4]
         class_ind = int(bbox[5])
+        print('rectangle_colors', rectangle_colors, rectangle_colors if rectangle_colors != '' else colors[class_ind])
         bbox_color = rectangle_colors if rectangle_colors != '' else colors[class_ind]
         bbox_thick = int(0.6 * (image_h + image_w) / 1000)
         if bbox_thick < 1:
@@ -123,7 +124,7 @@ def get_video_capture_info(vid):
     return width, height, fps
 
 
-def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show=False,  rectangle_colors='', Track_only=[]):
+def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show=False,  rectangle_colors=''):
     # Definition of the parameters
     max_cosine_distance = 0.7
     nn_budget = None
@@ -192,12 +193,10 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
 
         # draw detection on frame
         image = draw_bbox(original_frame, tracked_bboxes,
-                          CLASSES, tracking=True)
+                          CLASSES, tracking=True, rectangle_colors=rectangle_colors)
         image = cv2.putText(image, "Time: {:.1f} FPS".format(
             fps), (0, 30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 2)
 
-        # draw original yolo detection
-        #image = draw_bbox(image, bboxes, CLASSES=CLASSES, show_label=False, rectangle_colors=rectangle_colors, tracking=True)
 
         # show and store the results
         print("Time: {:.2f}ms, Detection FPS: {:.1f}, total FPS: {:.1f}".format(
@@ -224,7 +223,7 @@ if __name__ == "__main__":
     parser.add_argument("--no_show", help="if mentioned, output images will not be shown, called without any argument",
                         action="store_false", default=True)
     parser.add_argument("--iou_threshold", help="boolean for displaying output image",
-                        type=float, default=0.1)
+                        type=float, default=0.2)
     parser.add_argument("--conf_threshold", help="threshold for declaring a detection",
                         type=float, default=0.3)
     args = parser.parse_args()
@@ -233,5 +232,4 @@ if __name__ == "__main__":
           args.no_show, args.iou_threshold, args.conf_threshold)
     yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.input_size)
     Object_tracking(yolo, args.video_path, args.output_path, CLASSES="models/coco/coco.names",
-                    input_size=args.input_size, show=args.no_show,
-                    rectangle_colors=(255, 0, 0), Track_only=["person"])
+                    input_size=args.input_size, show=args.no_show)
