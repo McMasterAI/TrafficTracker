@@ -64,9 +64,8 @@ def get_video_capture_info(vid):
     return width, height, fps
 
 
-def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
-    NUM_CLASS = read_class_names(CLASSES)
-    num_classes = len(NUM_CLASS)
+def draw_bbox(image, bboxes, class_names, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
+    num_classes = len(class_names)
     image_h, image_w, _ = image.shape
     hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]
     #print("hsv_tuples", hsv_tuples)
@@ -97,7 +96,7 @@ def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Tex
             if tracking:
                 score_str = " "+str(score)
             try:
-                label = "{}".format(NUM_CLASS[class_ind]) + score_str
+                label = "{}".format(class_names[class_ind]) + score_str
             except KeyError:
                 print(
                     "You received KeyError, this might be that you are trying to use yolo original weights")
@@ -115,7 +114,7 @@ def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Tex
     return image
 
 
-def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show=False,  rectangle_colors=''):
+def Object_tracking(Yolo, video_path, output_path, class_names, input_size=416, show=False,  rectangle_colors=''):
     # Definition of the parameters
     max_cosine_distance = 0.7
     nn_budget = None
@@ -136,9 +135,8 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
     # output_path must be .mp4
     out = cv2.VideoWriter(output_path, codec, fps, (width, height))
 
-    NUM_CLASS = read_class_names(CLASSES)
-    key_list = list(NUM_CLASS.keys())
-    val_list = list(NUM_CLASS.values())
+    key_list = list(class_names.keys())
+    val_list = list(class_names.values())
 
     detection_times, tracking_times = [], []
 
@@ -155,7 +153,7 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
         t2 = time.time()
         names = []
         for clss in class_inds:
-            names.append(NUM_CLASS[clss])
+            names.append(class_names[clss])
         features = np.array(encoder(original_frame, boxes))
         # Pass detections to the deepsort object and obtain the track information.
         detections = [Detection(bbox, score, class_name, feature) for bbox,
@@ -177,7 +175,7 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
 
         # draw detection on frame
         image = draw_bbox(original_frame, tracked_bboxes,
-                          CLASSES, tracking=True, rectangle_colors=rectangle_colors)
+                          class_names, tracking=True, rectangle_colors=rectangle_colors)
         image = cv2.putText(image, "Time: {:.1f} FPS".format(
             fps), (0, 30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 2)
 
@@ -212,7 +210,10 @@ if __name__ == "__main__":
                         type=float, default=0.1)
     parser.add_argument("--conf_threshold", help="threshold for declaring a detection",
                         type=float, default=0.25)
+    
+    classes = None#['person', 'bicycle', 'car', 'motorbike', 'bus','truck']
     args = parser.parse_args()
-    yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.input_size)
-    Object_tracking(yolo, args.video_path, args.output_path, CLASSES=args.label_names_path,
+    class_names = read_class_names(args.label_names_path)
+    yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.input_size, track_only=classes)
+    Object_tracking(yolo, args.video_path, args.output_path, class_names,
                     input_size=args.input_size, show=args.no_show)

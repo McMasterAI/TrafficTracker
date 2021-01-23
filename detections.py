@@ -23,7 +23,8 @@ import sys
 sys.path.insert(0, './yolov5')
 
 
-def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', imgsz=640):
+def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', imgsz=640,
+    track_only=None):
     """Save a yolo model object.
 
     Args:
@@ -47,7 +48,7 @@ def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, w
     yolov5.augment = False
     yolov5.conf_thres = conf_thres
     yolov5.iou_thres = iou_thres
-    yolov5.classes = None
+    yolov5.classes = track_only
     yolov5.agnostic_nms = False
 
     return yolov5
