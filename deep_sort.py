@@ -19,13 +19,17 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # Helpers
 
-def read_class_names(class_file_name):
+def read_class_names(class_file_name, desired_classes=[]):
     # loads class name from a file
     names = {}
+    desired_classes_names = [] # order of this list does not matter
     with open(class_file_name, 'r') as data:
         for ID, name in enumerate(data):
-            names[ID] = name.strip('\n')
-    return names
+            name_stripped = name.strip('\n')
+            if name_stripped in desired_classes:
+                desired_classes_names.append(ID)
+            names[ID] = name_stripped
+    return names, desired_classes_names
 
 def preprocess_image(img0, input_size):
     # preprocessing found in datasets.py
@@ -209,11 +213,11 @@ if __name__ == "__main__":
     parser.add_argument("--iou_threshold", help="boolean for displaying output image",
                         type=float, default=0.1)
     parser.add_argument("--conf_threshold", help="threshold for declaring a detection",
-                        type=float, default=0.25)
+                        type=float, default=0.5)
     
-    classes = None#['person', 'bicycle', 'car', 'motorbike', 'bus','truck']
     args = parser.parse_args()
-    class_names = read_class_names(args.label_names_path)
-    yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.input_size, track_only=classes)
+    desired_classes = ['person', 'bicycle', 'car', 'motorbike', 'bus','truck']
+    class_names, desired_classes_names = read_class_names(args.label_names_path, desired_classes=desired_classes)
+    yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.input_size, track_only=desired_classes_names)
     Object_tracking(yolo, args.video_path, args.output_path, class_names,
                     input_size=args.input_size, show=args.no_show)

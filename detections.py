@@ -48,7 +48,7 @@ def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, w
     yolov5.augment = False
     yolov5.conf_thres = conf_thres
     yolov5.iou_thres = iou_thres
-    yolov5.classes = track_only
+    yolov5.classes = None if track_only == [] else track_only
     yolov5.agnostic_nms = False
 
     return yolov5
