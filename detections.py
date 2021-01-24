@@ -23,14 +23,13 @@ import sys
 sys.path.insert(0, './yolov5')
 
 
-def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', imgsz=640,
-    track_only=None):
+def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5m.pt', 
+    imgsz=640, track_only=[]):
     """Save a yolo model object.
-
     Args:
         device (device): Which device to use, cpu or gpu.
         weights (String): Relative location of weights file.
-
+        track_only (String list): list of object classes to track.
     Returns:
         model: yolov5 model.
     """
