@@ -19,17 +19,21 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # Helpers
 
-def read_class_names(class_file_name):
+def read_class_names(class_file_name, desired_classes=[]):
     # loads class name from a file
     names = {}
+    desired_classes_names = [] # order of this list does not matter
     with open(class_file_name, 'r') as data:
         for ID, name in enumerate(data):
-            names[ID] = name.strip('\n')
-    return names
+            name_stripped = name.strip('\n')
+            if name_stripped in desired_classes:
+                desired_classes_names.append(ID)
+            names[ID] = name_stripped
+    return names, desired_classes_names
 
-def preprocess_image(img0, input_size):
+def preprocess_image(img0, image_size):
     # preprocessing found in datasets.py
-    img = letterbox(img0, new_shape=input_size)[0]
+    img = letterbox(img0, new_shape=image_size)[0]
     # Convert
     img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
     img = np.ascontiguousarray(img)
@@ -64,9 +68,8 @@ def get_video_capture_info(vid):
     return width, height, fps
 
 
-def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
-    NUM_CLASS = read_class_names(CLASSES)
-    num_classes = len(NUM_CLASS)
+def draw_bbox(image, bboxes, class_names, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
+    num_classes = len(class_names)
     image_h, image_w, _ = image.shape
     hsv_tuples = [(1.0 * x / num_classes, 1., 1.) for x in range(num_classes)]
     #print("hsv_tuples", hsv_tuples)
@@ -97,7 +100,7 @@ def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Tex
             if tracking:
                 score_str = " "+str(score)
             try:
-                label = "{}".format(NUM_CLASS[class_ind]) + score_str
+                label = "{}".format(class_names[class_ind]) + score_str
             except KeyError:
                 print(
                     "You received KeyError, this might be that you are trying to use yolo original weights")
@@ -115,7 +118,7 @@ def draw_bbox(image, bboxes, CLASSES, show_label=True, show_confidence=True, Tex
     return image
 
 
-def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show=False,  rectangle_colors=''):
+def Object_tracking(Yolo, video_path, output_path, class_names, image_size=416, show=False,  rectangle_colors=''):
     # Definition of the parameters
     max_cosine_distance = 0.7
     nn_budget = None
@@ -136,9 +139,8 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
     # output_path must be .mp4
     out = cv2.VideoWriter(output_path, codec, fps, (width, height))
 
-    NUM_CLASS = read_class_names(CLASSES)
-    key_list = list(NUM_CLASS.keys())
-    val_list = list(NUM_CLASS.values())
+    key_list = list(class_names.keys())
+    val_list = list(class_names.values())
 
     detection_times, tracking_times = [], []
 
@@ -148,14 +150,14 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
         original_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         original_frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
         # preprocessing found in datasets.py
-        img = preprocess_image(frame, input_size)
+        img = preprocess_image(frame, image_size)
 
         t1 = time.time()
         boxes, class_inds, scores = yolo_predict(yolo, img, frame)
         t2 = time.time()
         names = []
         for clss in class_inds:
-            names.append(NUM_CLASS[clss])
+            names.append(class_names[clss])
         features = np.array(encoder(original_frame, boxes))
         # Pass detections to the deepsort object and obtain the track information.
         detections = [Detection(bbox, score, class_name, feature) for bbox,
@@ -177,7 +179,7 @@ def Object_tracking(Yolo, video_path, output_path, CLASSES, input_size=416, show
 
         # draw detection on frame
         image = draw_bbox(original_frame, tracked_bboxes,
-                          CLASSES, tracking=True, rectangle_colors=rectangle_colors)
+                          class_names, tracking=True, rectangle_colors=rectangle_colors)
         image = cv2.putText(image, "Time: {:.1f} FPS".format(
             fps), (0, 30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 2)
 
@@ -204,15 +206,20 @@ if __name__ == "__main__":
                         type=str, default="detection.mp4")
     parser.add_argument("--label_names_path", help="path to the names of the labels", 
                         type=str, default="models/coco/coco.names")
-    parser.add_argument("--input_size", help="image input size",
+    parser.add_argument('--weights_path', nargs='+', type=str,
+                        default='models/yolov5s.pt', help='path to weights, __model__.pt, path')
+    parser.add_argument("--image_size", help="image input size",
                         type=int, default=640)
     parser.add_argument("--no_show", help="if mentioned, output images will not be shown, called without any argument",
                         action="store_false", default=True)
     parser.add_argument("--iou_threshold", help="boolean for displaying output image",
                         type=float, default=0.1)
     parser.add_argument("--conf_threshold", help="threshold for declaring a detection",
-                        type=float, default=0.25)
+                        type=float, default=0.5)
+    
     args = parser.parse_args()
-    yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.input_size)
-    Object_tracking(yolo, args.video_path, args.output_path, CLASSES=args.label_names_path,
-                    input_size=args.input_size, show=args.no_show)
+    desired_classes = ['person', 'bicycle', 'car', 'motorbike', 'bus','truck']
+    class_names, desired_classes_names = read_class_names(args.label_names_path, desired_classes=desired_classes)
+    yolo = Load_Yolo_Model(conf_thres=args.conf_threshold,iou_thres=args.iou_threshold,imgsz = args.image_size, track_only=desired_classes_names, weights=args.weights_path)
+    Object_tracking(yolo, args.video_path, args.output_path, class_names,
+                    image_size=args.image_size, show=args.no_show)
