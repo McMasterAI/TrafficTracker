@@ -4,7 +4,7 @@ sklearn
 
 # YOLOv5
 torch
-torchvision==0.7.0
+torchvision
 opencv-python
 pillow
 tqdm
