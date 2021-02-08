@@ -1,4 +1,6 @@
-# TrafficTracker
+![](TrafficTracker-logo-wide.png)
+
+# A street traffic heatmap generator built with YOLOv5 and DeepSORT
 
 [![Contributors][contributors-shield]][contributors-url]
 [![Issues][issues-shield]][issues-url]
