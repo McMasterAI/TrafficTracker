@@ -49,11 +49,11 @@ Distributed under the MIT License. See `LICENSE` for more information.
 - [PythonLessons TensorFlow-2.x-YOLOv3](https://github.com/pythonlessons/TensorFlow-2.x-YOLOv3)
 
 
-[contributors-shield]: https://img.shields.io/github/contributors/McMasterAI/BNA-traffic-mapper.svg
-[contributors-url]: https://github.com/McMasterAI/BNA-traffic-mapper/graphs/contributors
-[issues-shield]: https://img.shields.io/github/issues/McMasterAI/BNA-traffic-mapper.svg
-[issues-url]: https://github.com/McMasterAI/BNA-traffic-mapper/issues
-[circleci-url]: https://circleci.com/gh/McMasterAI/BNA-traffic-mapper.svg?style=shield
-[circleci-shield]: https://circleci.com/gh/McMasterAI/BNA-traffic-mapper
-[license-shield]: https://img.shields.io/github/license/McMasterAI/BNA-traffic-mapper.svg
-[license-url]: https://github.com/McMasterAI/BNA-traffic-mapper/blob/master/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/McMasterAI/TrafficTracker.svg
+[contributors-url]: https://github.com/McMasterAI/TrafficTracker/graphs/contributors
+[issues-shield]: https://img.shields.io/github/issues/McMasterAI/TrafficTracker.svg
+[issues-url]: https://github.com/McMasterAI/TrafficTracker/issues
+[circleci-url]: https://circleci.com/gh/McMasterAI/TrafficTracker.svg?style=shield
+[circleci-shield]: https://circleci.com/gh/McMasterAI/TrafficTracker
+[license-shield]: https://img.shields.io/github/license/McMasterAI/TrafficTracker.svg
+[license-url]: https://github.com/McMasterAI/TrafficTracker/blob/master/LICENSE.txt
