@@ -1,7 +1,7 @@
 # vim: expandtab:ts=4:sw=4
 import numpy as np
 import scipy.linalg
-from numba import njit
+from numba import njit,jit
 
 """
 Table for the 0.95 quantile of the chi-square distribution with N degrees of
@@ -28,9 +28,18 @@ def numba_zeros_like(x):
 @njit
 def numba_diag(x):
     return np.diag(x)
-@njit 
-def numba_square(x):
-    return np.square(x)
+@jit
+def numba_multi_dot(x):
+    return np.linalg.multi_dot(x)
+@njit
+def numba_dot(x,y):
+    return np.dot(x,y)
+@njit
+def numba_sum_axis_0(x):
+    return np.sum(x,axis=0)
+@njit
+def numba_cholesky(x):
+    return np.linalg.cholesky(x)
 
 class KalmanFilter(object):
     """
@@ -94,7 +103,7 @@ class KalmanFilter(object):
             10 * self._std_weight_velocity * measurement[3],
             1e-5,
             10 * self._std_weight_velocity * measurement[3]]
-        covariance = numba_diag(numba_square(std))
+        covariance = numba_diag(np.square(std))
         return mean, covariance
 
     def predict(self, mean, covariance):
@@ -126,10 +135,10 @@ class KalmanFilter(object):
             self._std_weight_velocity * mean[3],
             1e-5,
             self._std_weight_velocity * mean[3]]
-        motion_cov = numba_diag(numba_square(np.r_[std_pos, std_vel]))
+        motion_cov = numba_diag(np.square(np.r_[std_pos, std_vel]))
 
-        mean = np.dot(self._motion_mat, mean)
-        covariance = np.linalg.multi_dot((
+        mean = numba_dot(self._motion_mat, mean)
+        covariance = numba_multi_dot((
             self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
 
         return mean, covariance
@@ -156,10 +165,10 @@ class KalmanFilter(object):
             self._std_weight_position * mean[3],
             1e-1,
             self._std_weight_position * mean[3]]
-        innovation_cov = numba_diag(numba_square(std))
+        innovation_cov = numba_diag(np.square(std))
 
-        mean = np.dot(self._update_mat, mean)
-        covariance = np.linalg.multi_dot((
+        mean = numba_dot(self._update_mat, mean)
+        covariance = numba_multi_dot((
             self._update_mat, covariance, self._update_mat.T))
         return mean, covariance + innovation_cov
 
@@ -188,12 +197,12 @@ class KalmanFilter(object):
         chol_factor, lower = scipy.linalg.cho_factor(
             projected_cov, lower=True, check_finite=False)
         kalman_gain = scipy.linalg.cho_solve(
-            (chol_factor, lower), np.dot(covariance, self._update_mat.T).T,
+            (chol_factor, lower), numba_dot(covariance, self._update_mat.T).T,
             check_finite=False).T
         innovation = measurement - projected_mean
 
-        new_mean = mean + np.dot(innovation, kalman_gain.T)
-        new_covariance = covariance - np.linalg.multi_dot((
+        new_mean = mean + numba_dot(innovation, kalman_gain.T)
+        new_covariance = covariance - numba_multi_dot((
             kalman_gain, projected_cov, kalman_gain.T))
         return new_mean, new_covariance
 
@@ -232,10 +241,10 @@ class KalmanFilter(object):
             mean, covariance = mean[:2], covariance[:2, :2]
             measurements = measurements[:, :2]
 
-        cholesky_factor = np.linalg.cholesky(covariance)
+        cholesky_factor = numba_cholesky(covariance)
         d = measurements - mean
         z = scipy.linalg.solve_triangular(
             cholesky_factor, d.T, lower=True, check_finite=False,
             overwrite_b=True)
-        squared_maha = np.sum(z * z, axis=0)
+        squared_maha = numba_sum_axis_0(z * z)
         return squared_maha
