@@ -5,7 +5,6 @@ from . import linear_assignment
 from numba import njit,jit
 
 
-@njit
 def iou(bbox, candidates):
     """Computer intersection over union.
 
