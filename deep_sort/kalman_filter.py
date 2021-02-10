@@ -64,7 +64,41 @@ def numba_predict(mean, covariance, _std_weight_position, _std_weight_velocity, 
     motion_cov = np.diag(np.square(np.hstack((std_pos, std_vel))))
 
     mean = np.dot(_motion_mat, mean)
-    return mean, covariance , motion_cov 
+    covariance = np.dot(np.dot(
+        _motion_mat, covariance), _motion_mat.T) + motion_cov
+    return mean, covariance
+
+@njit    
+def numba_project(mean, covariance, _std_weight_position, _update_mat):
+    std = np.array([
+        _std_weight_position * mean[3],
+        _std_weight_position * mean[3],
+        1e-1,
+        _std_weight_position * mean[3]])
+    innovation_cov = np.diag(np.square(std))
+
+    mean = np.dot(_update_mat, mean)
+    covariance = np.dot(np.dot(
+        _update_mat, covariance), _update_mat.T)
+    return mean, covariance+ innovation_cov
+
+@njit
+def numba_update(mean, covariance, measurement, projected_mean, projected_cov, kalman_gain):
+    innovation = measurement - projected_mean
+    new_mean = mean + np.dot(innovation, kalman_gain.T)
+    new_covariance = covariance - np.dot(np.dot(
+        kalman_gain, projected_cov), kalman_gain.T)
+    return new_mean, new_covariance
+
+@njit
+def numba_gating_distance_cholesky(mean, covariance, measurements):
+    cholesky_factor = np.linalg.cholesky(covariance)
+    d = measurements - mean
+    return cholesky_factor, d
+
+@njit
+def numba_gating_distance_squared_maha(z):
+    return np.sum(z * z, axis=0)
 
 class KalmanFilter(object):
     """
@@ -114,10 +148,8 @@ class KalmanFilter(object):
             Returns the mean vector and covariance matrix of the predicted
             state. Unobserved velocities are initialized to 0 mean.
         """
-        mean, covariance, motion_cov = numba_predict(mean, covariance, self._std_weight_position, self._std_weight_velocity, self._motion_mat)
+        return numba_predict(mean, covariance, self._std_weight_position, self._std_weight_velocity, self._motion_mat)
 
-        covariance = np.linalg.multi_dot((self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
-        return mean, covariance
     def project(self, mean, covariance):
         """Project state distribution to measurement space.
         Parameters
@@ -132,17 +164,7 @@ class KalmanFilter(object):
             Returns the projected mean and covariance matrix of the given state
             estimate.
         """
-        std = [
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[3],
-            1e-1,
-            self._std_weight_position * mean[3]]
-        innovation_cov = np.diag(np.square(std))
-
-        mean = np.dot(self._update_mat, mean)
-        covariance = np.linalg.multi_dot((
-            self._update_mat, covariance, self._update_mat.T))
-        return mean, covariance + innovation_cov
+        return numba_project(mean, covariance, self._std_weight_position, self._update_mat)
 
     def update(self, mean, covariance, measurement):
         """Run Kalman filter correction step.
@@ -168,12 +190,8 @@ class KalmanFilter(object):
         kalman_gain = scipy.linalg.cho_solve(
             (chol_factor, lower), np.dot(covariance, self._update_mat.T).T,
             check_finite=False).T
-        innovation = measurement - projected_mean
-
-        new_mean = mean + np.dot(innovation, kalman_gain.T)
-        new_covariance = covariance - np.linalg.multi_dot((
-            kalman_gain, projected_cov, kalman_gain.T))
-        return new_mean, new_covariance
+        
+        return numba_update(mean, covariance, measurement, projected_mean, projected_cov, kalman_gain)
 
     def gating_distance(self, mean, covariance, measurements,
                         only_position=False):
@@ -206,10 +224,8 @@ class KalmanFilter(object):
             mean, covariance = mean[:2], covariance[:2, :2]
             measurements = measurements[:, :2]
 
-        cholesky_factor = np.linalg.cholesky(covariance)
-        d = measurements - mean
+        cholesky_factor,d = numba_gating_distance_cholesky(mean, covariance, measurements) 
         z = scipy.linalg.solve_triangular(
             cholesky_factor, d.T, lower=True, check_finite=False,
             overwrite_b=True)
-        squared_maha = np.sum(z * z, axis=0)
-        return squared_maha
+        return numba_gating_distance_squared_maha(z)
