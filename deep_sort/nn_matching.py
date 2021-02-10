@@ -60,7 +60,6 @@ def _cosine_distance(a, b, data_is_normalized=False):
     """
     if not data_is_normalized:
         a,b = normalize_cosine_distance_norm(np.asarray(a),np.asarray(b))
-        print('THIS WORKS, jk')
     return numba_cosine_distance_dot(a,b)
 
 
