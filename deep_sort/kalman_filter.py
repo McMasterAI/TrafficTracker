@@ -1,7 +1,7 @@
 # vim: expandtab:ts=4:sw=4
 import numpy as np
 import scipy.linalg
-
+from numba import njit
 
 """
 Table for the 0.95 quantile of the chi-square distribution with N degrees of
@@ -19,6 +19,18 @@ chi2inv95 = {
     8: 15.507,
     9: 16.919}
 
+@njit
+def numba_eye(n,m):
+    return np.eye(n,m)
+@njit
+def numba_zeros_like(x):
+    return np.zeros_like(x)
+@njit
+def numba_diag(x):
+    return np.diag(x)
+@njit 
+def numba_square(x):
+    return np.square(x)
 
 class KalmanFilter(object):
     """
@@ -41,10 +53,10 @@ class KalmanFilter(object):
         ndim, dt = 4, 1.
 
         # Create Kalman filter model matrices.
-        self._motion_mat = np.eye(2 * ndim, 2 * ndim)
+        self._motion_mat = numba_eye(2 * ndim, 2 * ndim)
         for i in range(ndim):
             self._motion_mat[i, ndim + i] = dt
-        self._update_mat = np.eye(ndim, 2 * ndim)
+        self._update_mat = numba_eye(ndim, 2 * ndim)
 
         # Motion and observation uncertainty are chosen relative to the current
         # state estimate. These weights control the amount of uncertainty in
@@ -70,7 +82,7 @@ class KalmanFilter(object):
 
         """
         mean_pos = measurement
-        mean_vel = np.zeros_like(mean_pos)
+        mean_vel = numba_zeros_like(mean_pos)
         mean = np.r_[mean_pos, mean_vel]
 
         std = [
@@ -82,7 +94,7 @@ class KalmanFilter(object):
             10 * self._std_weight_velocity * measurement[3],
             1e-5,
             10 * self._std_weight_velocity * measurement[3]]
-        covariance = np.diag(np.square(std))
+        covariance = numba_diag(numba_square(std))
         return mean, covariance
 
     def predict(self, mean, covariance):
@@ -114,7 +126,7 @@ class KalmanFilter(object):
             self._std_weight_velocity * mean[3],
             1e-5,
             self._std_weight_velocity * mean[3]]
-        motion_cov = np.diag(np.square(np.r_[std_pos, std_vel]))
+        motion_cov = numba_diag(numba_square(np.r_[std_pos, std_vel]))
 
         mean = np.dot(self._motion_mat, mean)
         covariance = np.linalg.multi_dot((
@@ -144,7 +156,7 @@ class KalmanFilter(object):
             self._std_weight_position * mean[3],
             1e-1,
             self._std_weight_position * mean[3]]
-        innovation_cov = np.diag(np.square(std))
+        innovation_cov = numba_diag(numba_square(std))
 
         mean = np.dot(self._update_mat, mean)
         covariance = np.linalg.multi_dot((
