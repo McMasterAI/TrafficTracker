@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import numpy as np
 from . import linear_assignment
-from numba import njit,jit, vectorize
+from numba import njit
 
 def numba_prod(arr):
     return np.product(arr)
