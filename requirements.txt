@@ -1,6 +1,7 @@
 # Deep SORT
 numpy
-sklearn
+scipy
+scikit-learn==0.22.2.post1
 
 # YOLOv5
 torch
@@ -8,7 +9,9 @@ torchvision
 opencv-python
 pillow
 tqdm
-matplotlib
+pandas
+seaborn
+matplotlib==3.3.4
 PyYAML
 
 # Flask
