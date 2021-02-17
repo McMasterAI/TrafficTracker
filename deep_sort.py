@@ -143,9 +143,9 @@ def Object_tracking(Yolo, video_path, output_path, class_names, image_size=416, 
     val_list = list(class_names.values())
 
     detection_times, tracking_times = [], []
+    _, frame = vid.read()  # BGR
 
-    while True:
-        _, frame = vid.read()  # BGR
+    while frame is not None:
         # create the original_frame for display purposes (draw_bboxes)
         original_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         original_frame = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
@@ -182,6 +182,10 @@ def Object_tracking(Yolo, video_path, output_path, class_names, image_size=416, 
                           class_names, tracking=True, rectangle_colors=rectangle_colors)
         image = cv2.putText(image, "Time: {:.1f} FPS".format(
             fps), (0, 30), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 255), 2)
+
+        
+        # get next frame
+        _, frame = vid.read()  # BGR
 
 
         # show and store the results
