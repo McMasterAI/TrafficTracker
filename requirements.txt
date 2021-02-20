@@ -1,6 +1,5 @@
 # Deep SORT
 numpy
-scipy
 scikit-learn==0.22.2.post1
 
 # YOLOv5
