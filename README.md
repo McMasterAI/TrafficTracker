@@ -47,6 +47,10 @@ Running the container on Jetson Nano:
 ```
 sudo docker run -it --rm --runtime nvidia --network host traffictracker:latest
 ```
+Running development container:
+```
+sudo docker run -it --rm --runtime nvidia -v /path/to/TrafficTracker:/TrafficTracker traffictracker:dev
+```
 
 # License
 Distributed under the MIT License. See `LICENSE` for more information.
