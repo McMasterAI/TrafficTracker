@@ -156,12 +156,12 @@ def detect(save_img=False):
 
     for path, img, im0s, _ in yolov5.dataset:
         p = Path(path)
-        save_path = str(out + p.name)
+        save_path = str(out + '/' + p.name)
         # path is the path of the image file, img is the formatted image, im0s is the original image from cv2.imread(path) in BGR format
         boxes, classes, scores = yolo_predict(yolov5, img, im0s)
 
         for i in range(len(boxes)):
-            plot_one_box_tlwh(boxes[i], im0s, label=yolov5.names[classes[i]], color=colors[int(classes[i])], line_thickness=3)
+            plot_one_box_tlwh(boxes[i], im0s, label=(yolov5.names[classes[i]] + " %.2f" % scores[i]), color=colors[int(classes[i])], line_thickness=3)
 
         cv2.imwrite(save_path, im0s)
 
