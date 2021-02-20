@@ -1,29 +1,29 @@
-from yolov5.utils.torch_utils import select_device, time_synchronized
-from yolov5.utils.general import check_img_size, non_max_suppression, scale_coords, strip_optimizer, set_logging
-from yolov5.utils.datasets import LoadStreams, LoadImages
-from yolov5.models.experimental import attempt_load
-import yolov5
 import argparse
 import os
 import shutil
+import sys
 import time
 from pathlib import Path
 
 import cv2
 import torch
-import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from numpy import random, zeros_like
 
+from yolov5.models.experimental import attempt_load
+from yolov5.utils.datasets import LoadImages, LoadStreams
+from yolov5.utils.general import (check_img_size, non_max_suppression,
+                                  scale_coords, set_logging, strip_optimizer,
+                                  xyxy2xywh)
+from yolov5.utils.torch_utils import select_device, time_synchronized
 
 # The two lines below, import sys AND sys.path.insert(0,'./yolov5') , are necessary in order
 # to avoid modules not found errors.
 # https://github.com/ultralytics/yolov5/issues/353
-import sys
 sys.path.insert(0, './yolov5')
 
 
-def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5m.pt', 
+def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', 
     imgsz=640, track_only=[]):
     """Save a yolo model object.
     Args:
@@ -61,6 +61,20 @@ def xyxy2tlwh(x):
     y[:, 2] = x[:, 2] - x[:, 0]  # width
     y[:, 3] = x[:, 3] - x[:, 1]  # height
     return y
+
+
+def plot_one_box_tlwh(x, img, color=None, label=None, line_thickness=None):
+    # Plots one bounding box on image img
+    tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
+    color = color or [random.randint(0, 255) for _ in range(3)]
+    c1, c2 = (int(x[0]), int(x[1])), (int(x[0]) + int(x[2]), int(x[1]) + int(x[3]))
+    cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
+    if label:
+        tf = max(tl - 1, 1)  # font thickness
+        t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
+        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+        cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
+        cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
 
 def yolo_predict(yolov5, img, im0s):
@@ -112,36 +126,45 @@ def yolo_predict(yolov5, img, im0s):
 
 
 def detect(save_img=False):
-    out, source, imgsz = opt.save_dir, opt.source, opt.img_size
+    out, source, imgsz, device = opt.save_dir, opt.source, opt.img_size, opt.device
     webcam = source.isnumeric() or source.startswith(
         ('rtsp://', 'rtmp://', 'http://')) or source.endswith('.txt')
 
     # Initialize
     set_logging()
-    device = select_device(opt.device)
     if os.path.exists(out):  # output dir
         shutil.rmtree(out)  # delete dir
     os.makedirs(out)  # make new dir
 
     # Load model
-    yolov5 = Load_Yolo_Model()
+    desired_classes = [0, 1, 2, 3, 5, 7]
+    yolov5 = Load_Yolo_Model(device=select_device(device), track_only=desired_classes)
+    colors = [[random.randint(0, 255) for _ in range(3)] for _ in yolov5.names]
 
     # Set Dataloader
     yolov5.vid_path, yolov5.vid_writer = None, None
     if webcam:
         cudnn.benchmark = True  # set True to speed up constant image size inference
-        yolov5.dataset = LoadStreams(source, img_size=yolov5.imgsz)
+        yolov5.dataset = LoadStreams(source, img_size=imgsz)
     else:
         yolov5.dataset = LoadImages(source, img_size=imgsz)
 
     # Run inference
     t0 = time.time()
-    img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
+    img = torch.zeros((1, 3, imgsz, imgsz), device=yolov5.device)  # init img
     _ = yolov5(img.half() if yolov5.is_half else img) if yolov5.is_half else None
 
-    for _, img, im0s, _ in yolov5.dataset:
+    for path, img, im0s, _ in yolov5.dataset:
+        p = Path(path)
+        save_path = str(out + '/' + p.name)
         # path is the path of the image file, img is the formatted image, im0s is the original image from cv2.imread(path) in BGR format
-        print(yolo_predict(yolov5, img, im0s))
+        boxes, classes, scores = yolo_predict(yolov5, img, im0s)
+
+        for i in range(len(boxes)):
+            plot_one_box_tlwh(boxes[i], im0s, label=(yolov5.names[classes[i]] + " %.2f" % scores[i]), color=colors[int(classes[i])], line_thickness=3)
+
+        cv2.imwrite(save_path, im0s)
+
 
     print('Done. (%.3fs)' % (time.time() - t0))
 

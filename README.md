@@ -36,10 +36,20 @@ Coming soon...
 ## Installation
 
 # Usage
+Running the tracker:
 ```
 python deep_sort.py --source 0  # webcam
                              file.mp4  # video
                              path/to/file.mp4
+```
+
+Running the container on Jetson Nano:
+```
+sudo docker run -it --rm --runtime nvidia --network host traffictracker:latest
+```
+Running development container:
+```
+sudo docker run -it --rm --runtime nvidia -v /path/to/TrafficTracker:/TrafficTracker traffictracker:dev
 ```
 
 # License
