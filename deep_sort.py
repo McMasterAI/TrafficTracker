@@ -1,10 +1,9 @@
 from detections import Load_Yolo_Model, yolo_predict
 import random
 import colorsys
-from deep_sort import generate_detections as gdet
-from deep_sort.tracker import Tracker
-from deep_sort.detection import Detection
-from deep_sort import nn_matching
+from deep_sort import build_tracker
+from config_parser import get_config
+import torch
 import argparse
 import time
 from yolov5.utils.datasets import letterbox
@@ -43,7 +42,7 @@ def efficiency_statistics(detection_times, tracking_times):
     ms = sum(detection_times)/len(detection_times)*1000
     fps = 1000 / ms
     fps2 = 1000 / (sum(tracking_times)/len(tracking_times)*1000)
-    return ms, fps, fps2
+    return ms, fps , fps2
 
 
 def get_tracker_info(tracker, val_list, key_list):
@@ -82,9 +81,10 @@ def draw_bbox(image, bboxes, class_names, show_label=True, show_confidence=True,
 
     for i, bbox in enumerate(bboxes):
         coor = np.array(bbox[:4], dtype=np.int32)
-        score = bbox[4]
-        class_ind = int(bbox[5])
-        bbox_color = rectangle_colors if rectangle_colors != '' else colors[class_ind]
+        score = int(bbox[4])
+        class_name = bbox[5]
+        print(coor, score, class_name, show_confidence, type(score))
+        bbox_color = rectangle_colors
         bbox_thick = int(0.6 * (image_h + image_w) / 1000)
         if bbox_thick < 1:
             bbox_thick = 1
@@ -100,7 +100,7 @@ def draw_bbox(image, bboxes, class_names, show_label=True, show_confidence=True,
             if tracking:
                 score_str = " "+str(score)
             try:
-                label = "{}".format(class_names[class_ind]) + score_str
+                label = "{}".format(class_name) + score_str
             except KeyError:
                 print(
                     "You received KeyError, this might be that you are trying to use yolo original weights")
@@ -124,11 +124,12 @@ def Object_tracking(Yolo, video_path, output_path, class_names, image_size=416, 
     nn_budget = None
 
     # initialize deep sort object
-    model_filename = 'models/mars-small128.pb'
-    encoder = gdet.create_box_encoder(model_filename, batch_size=1)
-    metric = nn_matching.NearestNeighborDistanceMetric(
-        "cosine", max_cosine_distance, nn_budget)
-    tracker = Tracker(metric)
+    cfg = get_config()
+    cfg.merge_from_file('models/deep_sort.yaml')
+    use_cuda = torch.cuda.is_available()
+    if not use_cuda:
+        print("Running in cpu mode which maybe very slow!", UserWarning)
+    tracker = build_tracker(cfg, use_cuda=use_cuda)
 
     if video_path:
         vid = cv2.VideoCapture(video_path)  # detect on video
@@ -158,15 +159,11 @@ def Object_tracking(Yolo, video_path, output_path, class_names, image_size=416, 
         names = []
         for clss in class_inds:
             names.append(class_names[clss])
-        features = np.array(encoder(original_frame, boxes))
         # Pass detections to the deepsort object and obtain the track information.
-        detections = [Detection(bbox, score, class_name, feature) for bbox,
-                      score, class_name, feature in zip(boxes, scores, names, features)]
-        tracker.predict()
-        tracker.update(detections)
 
-        # Obtain info from the tracks
-        tracked_bboxes = get_tracker_info(tracker, val_list, key_list)
+        boxes = np.array([list(box) for box in boxes]) #this should be done in yolo_predict!
+        print(boxes)
+        tracked_bboxes = tracker.update(boxes, names, scores, original_frame)
 
         # update the times information
         t3 = time.time()
