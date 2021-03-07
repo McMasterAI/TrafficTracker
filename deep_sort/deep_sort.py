@@ -39,12 +39,11 @@ class DeepSort(object):
         for track in self.tracker.tracks:
             if not track.is_confirmed() or track.time_since_update > 1:
                 continue
-            box = track.to_tlwh()
-            x1,y1,x2,y2 = self._tlwh_to_xyxy(box)
+            box = track.to_tlwh().astype(int)
+            x1,y1,w,h = self._tlwh_to_xywh(box)
             track_id = track.track_id
-            print(dir(track))
             class_name = track.class_name
-            outputs.append([x1,y1,x2,y2,track_id,class_name])
+            outputs.append([x1,y1,w,h,track_id,class_name])
         if len(outputs) > 0:
             outputs = np.stack(outputs,axis=0)
         return outputs
@@ -65,6 +64,11 @@ class DeepSort(object):
         bbox_tlwh[:,1] = bbox_xywh[:,1] - bbox_xywh[:,3]/2.
         return bbox_tlwh
 
+    def _tlwh_to_xywh(self, box_tlwh):
+        w,h = box_tlwh[2],box_tlwh[3]
+        x_mid = min(box_tlwh[0]+w, self.width-1)
+        y_mid = min(box_tlwh[1]+h, self.height-1)
+        return x_mid,y_mid,w,h
 
     def _xywh_to_xyxy(self, bbox_xywh):
         x,y,w,h = bbox_xywh

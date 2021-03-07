@@ -66,6 +66,11 @@ def get_video_capture_info(vid):
     fps = int(vid.get(cv2.CAP_PROP_FPS))
     return width, height, fps
 
+def xywh_to_xyxy(coor):
+    w,h = coor[2], coor[3]
+    x1, y1 = max(coor[0]-w//2,0), max(coor[1]-h//2,0)
+    x2, y2 = x1 + w, y1 + h
+    return x1,y1,x2,y2
 
 def draw_bbox(image, bboxes, class_names, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
     num_classes = len(class_names)
@@ -83,14 +88,12 @@ def draw_bbox(image, bboxes, class_names, show_label=True, show_confidence=True,
         coor = np.array(bbox[:4], dtype=np.int32)
         score = int(bbox[4])
         class_name = bbox[5]
-        print(coor, score, class_name, show_confidence, type(score))
         bbox_color = rectangle_colors
         bbox_thick = int(0.6 * (image_h + image_w) / 1000)
         if bbox_thick < 1:
             bbox_thick = 1
         fontScale = 0.75 * bbox_thick
-        (x1, y1), (x2, y2) = (coor[0], coor[1]), (coor[2], coor[3])
-
+        x1, y1, x2, y2 = xywh_to_xyxy(coor)
         # put object rectangle
         cv2.rectangle(image, (x1, y1), (x2, y2), bbox_color, bbox_thick*2)
 
@@ -162,8 +165,7 @@ def Object_tracking(Yolo, video_path, output_path, class_names, image_size=416, 
         # Pass detections to the deepsort object and obtain the track information.
 
         boxes = np.array([list(box) for box in boxes]) #this should be done in yolo_predict!
-        print(boxes)
-        tracked_bboxes = tracker.update(boxes, names, scores, original_frame)
+        tracked_bboxes = tracker.update(boxes, names, scores, original_frame) # The image offset problem is I think that last parameter should be img instead of frame/original_frame
 
         # update the times information
         t3 = time.time()
