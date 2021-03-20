@@ -17,26 +17,24 @@ default_column_order = {
 }
 
 def execute_raw_query(query):
-    print('Querying: ',query)
+    #print('Querying: ',query)
     with pyodbc.connect(connection_line) as conn:
         with conn.cursor() as cursor: 
             return cursor.execute(query)
 
-def query_table(select_clause, where_clause, table, format='tuple'):
+def query_table(table, select_clause, where_clause=None, format='tuple'):
     columns = default_column_order[table] if select_clause == ['*'] else select_clause
     select_clause = ','.join(select_clause)
-    where_clause = ','.join(where_clause)
     query = 'SELECT ' + select_clause + ' FROM '+table
     if where_clause:
         query = query + ' WHERE ' + where_clause
-    print('Querying: ',query)
+    #print('Querying: ',query)
     with pyodbc.connect(connection_line) as conn:
         with conn.cursor() as cursor:
             if format == 'tuple':
                 result = [tuple(map(str.strip, row)) for row in cursor.execute(query)] #strips every attribute in every record
             elif format == 'raw':
                 result = cursor.execute(query).fetchall()
-                print(type(result))
             elif format == 'dataframe':
                 result = [tuple(map(str.strip, row)) for row in cursor.execute(query)]
                 result = pd.DataFrame( result , columns=columns)
@@ -44,9 +42,6 @@ def query_table(select_clause, where_clause, table, format='tuple'):
                 raise('Query output format does not exist')
             return result
 
-print(query_table(['location_id','longitude'],[],'locations', format='dataframe'))
-for r in query_table(['*'],[],'locations', format='raw'):
-    print(r.location_id.strip(), r.longitude.strip())
 
 def describe_query_table(select_clause, table):
     """"
@@ -59,5 +54,13 @@ def describe_query_table(select_clause, table):
     print('Description of query: ', query)
     return execute_raw_query(query).description
 
-print(describe_query_table(['*'],'heatmap'))
+
+if __name__ == "__main__":
+    # just some example queries
+    print(query_table('locations', ['location_id','longitude'], format='dataframe'))
+    print(query_table('heatmap', ['*'], format='dataframe'))
+    print(query_table('heatmap', ['*'],where_clause='created_time BETWEEN 2018 AND 2021', format='dataframe'))
+    for r in query_table('locations', ['*'],[], format='raw'):
+        print(r.location_id.strip(), r.longitude.strip())        
+    print(describe_query_table(['*'],'heatmap'))
 
