@@ -1,4 +1,4 @@
-![](TrafficTracker-logo-wide.png)
+![](TrafficTracker-logo.png)
 
 # A street traffic heatmap generator built with YOLOv5 and Deep SORT
 
