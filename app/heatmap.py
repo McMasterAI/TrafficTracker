@@ -3,7 +3,7 @@ import matplotlib; matplotlib.use('Agg')
 from matplotlib.colors import LinearSegmentedColormap 
 import matplotlib.image as mpimg 
 import matplotlib.pyplot as plt
-import seaborn as sns; sns.set()
+import seaborn as sns
 import pandas as pd
 
 def points_to_grid_values(data, width=100, height=100):
@@ -25,6 +25,7 @@ def points_to_grid_values(data, width=100, height=100):
                     heatmap_data[row][col]+=1
     return heatmap_data
 
+# TODO: remove chart numbers/ grid
 def create(heatmap_data, filename=None):
 #     wd = matplotlib.cm.winter._segmentdata # only has r,g,b  
 #     wd['alpha'] = ((0.0, 0.0, 0.3), 
@@ -42,7 +43,10 @@ def create(heatmap_data, filename=None):
         # cmap = "winter", # cm name or object
         alpha = 0.5, # whole heatmap is translucent
         annot = False,
-        zorder = 2)
+        zorder = 2,
+        xticklabels = False,
+        yticklabels = False,
+        cbar=False)
 
     # heatmap uses pcolormesh instead of imshow, so we can't pass through 
     # extent as a kwarg, so we can't mmatch the heatmap to the map. Instead, 
