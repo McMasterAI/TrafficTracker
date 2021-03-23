@@ -1,12 +1,16 @@
 import pyodbc
 import pandas as pd
+import yaml
 
-server = 'traffictracker.database.windows.net'
-database = 'heatmap'
-username = 'macadmin'
-password = 'MacAI2021'   
-driver= '{ODBC Driver 13 for SQL Server}'
-connection_line= 'DRIVER='+driver+';SERVER='+server+';PORT=1433;DATABASE='+database+';UID='+username+';PWD='+ password
+with open("config.yaml", 'r') as config_stream:
+    db_config = yaml.load(config_stream, Loader=yaml.BaseLoader)['heatmap_db_creds']
+    server = db_config['server']
+    database = db_config['database']
+    username = db_config['username']
+    password = db_config['password']
+    port = str(db_config['port'])
+    driver = db_config['driver']
+connection_string= f'DRIVER={driver};SERVER={server};PORT={port};DATABASE={database};UID={username};PWD={password}'
 
 heatmap_default_column_order = ['heatmap_id', 'created_time', 'Pos_x', 'Pos_y', 
     'width', 'height', 'Class', 'Object_id', 'locaton_id']
@@ -18,7 +22,7 @@ default_column_order = {
 
 def execute_raw_query(query):
     #print('Querying: ',query)
-    with pyodbc.connect(connection_line) as conn:
+    with pyodbc.connect(connection_string) as conn:
         with conn.cursor() as cursor: 
             return cursor.execute(query)
 
@@ -29,7 +33,7 @@ def query_table(table, select_clause, where_clause=None, format='tuple'):
     if where_clause:
         query = query + ' WHERE ' + where_clause
     #print('Querying: ',query)
-    with pyodbc.connect(connection_line) as conn:
+    with pyodbc.connect(connection_string) as conn:
         with conn.cursor() as cursor:
             if format == 'tuple':
                 result = [tuple(map(str.strip, row)) for row in cursor.execute(query)] #strips every attribute in every record
