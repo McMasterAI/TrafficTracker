@@ -1,0 +1,22 @@
+
+{
+    "grid_size":{"width":10,"height":10},
+    "heatmapTable": [
+        {
+            "key":1,
+            "time":1615915761.7031753,
+            "position":{"x":3,"y":2,"w":1,"h":2},
+            "class":"truck",
+            "object_id":0,
+            "location_id":0
+        },
+        {
+            "key":2,
+            "time":1615915761.7031753,
+            "position":{"x":5,"y":5,"w":1,"h":2},
+            "class":"truck",
+            "object_id":0,
+            "location_id":0
+        }
+    ]
+}
