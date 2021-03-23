@@ -2,7 +2,7 @@ import pyodbc
 import pandas as pd
 import yaml
 
-with open("config.yaml", 'r') as config_stream:
+with open("../config.yaml", 'r') as config_stream:
     db_config = yaml.load(config_stream, Loader=yaml.BaseLoader)['heatmap_db_creds']
     server = db_config['server']
     database = db_config['database']
