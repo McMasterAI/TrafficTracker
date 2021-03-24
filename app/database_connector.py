@@ -58,6 +58,19 @@ def describe_query_table(select_clause, table):
     print('Description of query: ', query)
     return execute_raw_query(query).description
 
+def insert_to_table(table,filepath):
+    try:
+        load_sql = "LOAD DATA LOCAL INFILE" + filepath + "INTO TABLE" + table + "\ FIELDS TERMINATED BY ',' ENCLOSED BY '\"' IGNORE 1 LINES;"
+        print(load_sql)
+        with pyodbc.connect(connection_string) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(load_sql)
+                conn.commit()
+     
+    except Exception as e:
+        print("Error: {}".format(str(e)))
+                
+
 
 if __name__ == "__main__":
     # just some example queries
