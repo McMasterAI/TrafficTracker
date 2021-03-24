@@ -1,3 +1,4 @@
+import argparse
 import colorsys
 import csv
 import time
@@ -9,19 +10,16 @@ from config_parser import get_config
 from deep_sort import build_tracker
 from detections import *
 from yolov5.utils.datasets import letterbox
+#from app.database_connector import insert_to_table
 
-deep_sort_path = "models/deep_sort.yaml"
-video_path = "inference/test_2fps.mp4"
 image_size = 416
-label_names_path = "models/coco/coco.names"
 columns = ["created_time", "Pos_x", "Pos_y", "width",
-           "height", "Class", "Object_id", "location_id"]
-
+            "height", "Class", "Object_id", "location_id"]
 
 class TrafficTracker(Thread):
     def __init__(self):
         cfg = get_config()
-        cfg.merge_from_file(deep_sort_path)
+        cfg.merge_from_file(opt.deep_sort_path)
         use_cuda = torch.cuda.is_available()
         if not use_cuda:
             print("Using CPU")
@@ -29,7 +27,7 @@ class TrafficTracker(Thread):
         desired_classes = ['person', 'bicycle',
                            'car', 'motorbike', 'bus', 'truck']
         class_names, desired_class_names = read_class_names(
-            label_names_path, desired_classes=desired_classes)
+            opt.label_names_path, desired_classes=desired_classes)
         self.class_names = class_names
 
         self.yolo = Load_Yolo_Model(track_only=desired_class_names)
@@ -72,9 +70,10 @@ class TrafficTracker(Thread):
 
             _, frame = self.vid.read()  # BGR
 
-        save_csv(columns, metrics)
+        save_csv(columns, metrics, opt.csv_path)
+        #insert_to_table("dbo.heatmap", opt.csv_path)
 
-    def get_new_video_capture(self, video_path=video_path):
+    def get_new_video_capture(self, video_path):
         self.vid = cv2.VideoCapture(video_path)
         self.vid_width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.vid_height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -141,7 +140,7 @@ class TrafficTracker(Thread):
         # preprocessing found in datasets.py
         img = letterbox(img0, new_shape=image_size)[0]
         # Convert
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB
         img = np.ascontiguousarray(img)
         return img
 
@@ -170,8 +169,8 @@ def read_class_names(class_file_name, desired_classes=[]):
     return names, desired_classes_names
 
 
-def save_csv(columns, dict_data):
-    with open("traffic_data.csv", "w") as f:
+def save_csv(columns, dict_data, csv_path):
+    with open(csv_path, "w") as f:
         writer = csv.DictWriter(f, fieldnames=columns)
         writer.writeheader()
         for data in dict_data:
@@ -179,5 +178,18 @@ def save_csv(columns, dict_data):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--deep_sort_path', nargs='+', type=str,
+                        default='models/deep_sort.yaml', help='deep_sort YAML path')
+    parser.add_argument('--yolo_path', nargs='+', type=str,
+                        default='models/yolov5s.pt', help='model.pt path')
+    parser.add_argument('--video_path', type=str,
+                        default='inference/test_2fps.mp4', help='source video file')
+    parser.add_argument('--label_names_path', type=str,
+                        default='models/coco/coco.names', help='label enumerations path')
+    parser.add_argument('--csv_path', type=str,
+                        default='traffic_data.csv', help='save path for output csv')
+    opt = parser.parse_args()
+
     traffic = TrafficTracker()
-    traffic.run("inference/test_2fps.mp4")
+    traffic.run("inference/test.mp4")
