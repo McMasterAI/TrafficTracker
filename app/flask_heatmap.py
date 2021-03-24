@@ -38,7 +38,7 @@ def send_heatmap_file(filename):
     return send_from_directory(app.config['IMG_FOLDER'], filename)
 
 def get_data_points(filename):
-    data = pd.read_csv(filename, names = ['key', 'datetime', 'x','y', 'w', 'h', 'class', 'object_id', 'location', 'direction'])
+    data = pd.read_csv(filename, names = ['created_time', 'Pos_x','Pos_y', 'width', 'height', 'Class', 'Object_id', 'location_id'])
     # with open(data_filename) as data_file:
     #     data = json.loads(data_file.read())
     # resolution = data['grid_size']

@@ -2,9 +2,22 @@
 <html>
 <head>
     <title>Heatmap</title>
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/default.css') }}">
 </head>
 <body>
     <img src="{{ url_for('send_heatmap_file', filename=image_filename) }}" alt="Heatmap Image">
     <!-- <iframe src="{{ url_for('send_heatmap_file', filename=image_filename) }}"></iframe> -->
+    <form>
+        <select id="object_class">
+            <option>Car</option>
+            <option>Person</option>
+            <option>Bus</option>
+            <option>Truck</option>
+        </select>
+        <input id="date_start" type="date">
+        <input id="date_end" type="date">
+        <input type="submit" value="Submit">
+    </form>
+
 </body>
 </html>
