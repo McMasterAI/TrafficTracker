@@ -23,7 +23,7 @@ from yolov5.utils.torch_utils import select_device, time_synchronized
 sys.path.insert(0, './yolov5')
 
 
-def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', 
+def Load_Yolo_Model(device=select_device(''), conf_thres=0.51, iou_thres=0.45, weights='models/yolov5s.pt', 
     imgsz=640, track_only=[]):
     """Save a yolo model object.
     Args:

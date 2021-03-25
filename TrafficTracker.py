@@ -11,7 +11,6 @@ from detections import *
 from yolov5.utils.datasets import letterbox
 #from app.database_connector import insert_to_table
 
-image_size = 640
 columns = ["created_time", "Pos_x", "Pos_y", "width",
            "height", "Class", "Object_id", "location_id"]
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
@@ -30,7 +29,7 @@ class TrafficTracker(Thread):
             opt.label_names_path, desired_classes=desired_classes)
         self.class_names = class_names
 
-        self.yolo = Load_Yolo_Model(track_only=desired_class_names)
+        self.yolo = Load_Yolo_Model(track_only=desired_class_names,conf_thres=opt.confidence)
         self.deepsort = build_tracker(cfg, use_cuda=use_cuda)
         print("Initialized!")
 
@@ -44,7 +43,7 @@ class TrafficTracker(Thread):
 
         metrics = []
         while og_frame is not None:
-            new_frame = self.preprocess_image(og_frame, image_size)
+            new_frame = self.preprocess_image(og_frame, opt.image_size)
 
             boxes, class_inds, scores = yolo_predict(
                 self.yolo, new_frame, og_frame)
@@ -71,7 +70,7 @@ class TrafficTracker(Thread):
             if len(outputs) > 0:
                 bbox_tlwh = outputs[:, :4]
                 identities = outputs[:, 4]
-                og_frame = self.draw_boxes(og_frame, bbox_tlwh, identities)
+                og_frame = self.draw_boxes(og_frame, bbox_tlwh, outputs[:][5][-1], identities)
                 out.write(og_frame)
 
             _, og_frame = self.vid.read()  # BGR
@@ -87,13 +86,13 @@ class TrafficTracker(Thread):
         self.vid_height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.vid_fps = int(self.vid.get(cv2.CAP_PROP_FPS))
 
-    def draw_boxes(self, img, bbox, identities=None):
+    def draw_boxes(self, img, bbox, cl, identities=None):
         for i, box in enumerate(bbox):
             x, y, w, h = [int(i) for i in box]
             # box text and bar
             id = int(identities[i]) if identities is not None else 0
             color = self.compute_color_for_labels(id)
-            label = '{}{:d}'.format("", id)
+            label = '{}{:d}  {}'.format("", id,cl)
             t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 2, 2)[0]
             cv2.rectangle(img, (x, y), (x+w, y+h), color, 3)
             cv2.rectangle(
@@ -179,6 +178,10 @@ if __name__ == "__main__":
                         default='models/coco/coco.names', help='label enumerations path')
     parser.add_argument('--csv_path', type=str,
                         default='traffic_data.csv', help='save path for output csv')
+    parser.add_argument('--image_size', type=int,
+                        default=640, help='height for the resolution to downscale video frames to')
+    parser.add_argument('--confidence', type=float,
+                        default=0.25, help='Confidence threshold for yolo classifier as a percentage from 0 to 1')
     opt = parser.parse_args()
 
     traffic = TrafficTracker()
