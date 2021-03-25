@@ -1,6 +1,7 @@
 # Deep SORT
 numpy
 scikit-learn==0.22.2.post1
+easydict
 
 # YOLOv5
 torch
