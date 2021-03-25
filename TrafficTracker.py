@@ -1,5 +1,4 @@
 import argparse
-import colorsys
 import csv
 import time
 from threading import Thread
@@ -14,7 +13,8 @@ from yolov5.utils.datasets import letterbox
 
 image_size = 416
 columns = ["created_time", "Pos_x", "Pos_y", "width",
-            "height", "Class", "Object_id", "location_id"]
+           "height", "Class", "Object_id", "location_id"]
+palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
 
 class TrafficTracker(Thread):
     def __init__(self):
@@ -38,16 +38,19 @@ class TrafficTracker(Thread):
         frame_time = start_time
 
         self.get_new_video_capture(video_path)
-        _, frame = self.vid.read()  # BGR
+        _, out = self.initialize_video_writer(
+            opt.output_path, self.vid_fps, self.vid_width, self.vid_height)
+        _, og_frame = self.vid.read()  # BGR
 
         metrics = []
-        while frame is not None:
-            img = self.preprocess_image(frame, image_size)
+        while og_frame is not None:
+            new_frame = self.preprocess_image(og_frame, image_size)
 
-            boxes, class_inds, scores = yolo_predict(self.yolo, img, frame)
+            boxes, class_inds, scores = yolo_predict(
+                self.yolo, new_frame, og_frame)
             boxes = np.array([list(box) for box in boxes])
             names = [self.class_names[name] for name in class_inds]
-            outputs = self.deepsort.update(boxes, names, scores, frame)
+            outputs = self.deepsort.update(boxes, names, scores, og_frame)
 
             # Generate Metrics
             frame_time = self.get_next_time(frame_time, self.vid_fps)
@@ -65,11 +68,15 @@ class TrafficTracker(Thread):
                 })
 
             if len(outputs) > 0:
-                # draw bboxes
-                pass
+                bbox_tlwh = outputs[:, :4]
+                identities = outputs[:, 4]
+                og_frame = self.draw_boxes(og_frame, bbox_tlwh, identities)
+                out.write(og_frame)
 
-            _, frame = self.vid.read()  # BGR
+            _, og_frame = self.vid.read()  # BGR
 
+        self.vid.release()
+        out.release()
         save_csv(columns, metrics, opt.csv_path)
         #insert_to_table("dbo.heatmap", opt.csv_path)
 
@@ -79,59 +86,29 @@ class TrafficTracker(Thread):
         self.vid_height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.vid_fps = int(self.vid.get(cv2.CAP_PROP_FPS))
 
-    def draw_bbox(self, image, bboxes, class_names, show_label=True, show_confidence=True, Text_colors=(255, 255, 0), rectangle_colors='', tracking=False):
-        num_classes = len(class_names)
-        image_h, image_w, _ = image.shape
-        hsv_tuples = [(1.0 * x / num_classes, 1., 1.)
-                      for x in range(num_classes)]
-        #print("hsv_tuples", hsv_tuples)
-        colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
-        colors = list(
-            map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)), colors))
-        random.seed(0)
-        random.shuffle(colors)
-        random.seed(None)
+    def draw_boxes(self, img, bbox, identities=None):
+        for i, box in enumerate(bbox):
+            x, y, w, h = [int(i) for i in box]
+            # box text and bar
+            id = int(identities[i]) if identities is not None else 0
+            color = self.compute_color_for_labels(id)
+            label = '{}{:d}'.format("", id)
+            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 2, 2)[0]
+            cv2.rectangle(img, (x, y), (x+w, y+h), color, 3)
+            cv2.rectangle(
+                img, (x, y), (x+t_size[0]+3, y+t_size[1]+4), color, -1)
+            cv2.putText(
+                img, label, (x, y+t_size[1]+4), cv2.FONT_HERSHEY_PLAIN, 2, [255, 255, 255], 2)
+        return img
 
-        for _, bbox in enumerate(bboxes):
-            coor = np.array(bbox[:4], dtype=np.int32)
-            score = int(bbox[4])
-            class_name = bbox[5]
-            bbox_color = rectangle_colors
-            bbox_thick = int(0.6 * (image_h + image_w) / 1000)
-            if bbox_thick < 1:
-                bbox_thick = 1
-            fontScale = 0.75 * bbox_thick
-            x1, y1, x2, y2 = self.xywh_to_xyxy(coor)
-            # put object rectangle
-            cv2.rectangle(image, (x1, y1), (x2, y2), bbox_color, bbox_thick*2)
-
-            if show_label:
-                # get text label
-                score_str = " {:.2f}".format(score) if show_confidence else ""
-                if tracking:
-                    score_str = " "+str(score)
-                try:
-                    label = "{}".format(class_name) + score_str
-                except KeyError:
-                    print(
-                        "You received KeyError, this might be that you are trying to use yolo original weights")
-                    print(
-                        "while using custom classes, if using custom model in configs.py set YOLO_CUSTOM_WEIGHTS = True")
-                # get text size
-                (text_width, text_height), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                                                                      fontScale, thickness=bbox_thick)
-                # put filled text rectangle
-                cv2.rectangle(image, (x1, y1), (x1 + text_width, y1 -
-                                                text_height - baseline), bbox_color, thickness=cv2.FILLED)
-                # put text above rectangle
-                cv2.putText(image, label, (x1, y1-4), cv2.FONT_HERSHEY_COMPLEX_SMALL,
-                            fontScale, Text_colors, bbox_thick, lineType=cv2.LINE_AA)
-        return image
+    @staticmethod
+    def compute_color_for_labels(label):
+        color = [int((p * (label ** 2 - label + 1)) % 255) for p in palette]
+        return tuple(color)
 
     @staticmethod
     def initialize_video_writer(output_path, fps, width, height):
-        codec = cv2.VideoWriter_fourcc(*'XVID')
-        # output_path must be .mp4
+        codec = cv2.VideoWriter_fourcc(*'MP4V') # output_path must be .mp4
         out = cv2.VideoWriter(output_path, codec, fps, (width, height))
         return codec, out
 
@@ -150,6 +127,16 @@ class TrafficTracker(Thread):
         x1, y1 = max(coor[0]-w//2, 0), max(coor[1]-h//2, 0)
         x2, y2 = x1 + w, y1 + h
         return x1, y1, x2, y2
+
+    @staticmethod
+    def xyxy_to_tlwh(bbox_xyxy):
+        x1,y1,x2,y2 = bbox_xyxy
+
+        t = x1
+        l = y1
+        w = int(x1-x2)
+        h = int(y1-y2)
+        return t,l,w,h
 
     @staticmethod
     def get_next_time(time, fps):
@@ -184,7 +171,9 @@ if __name__ == "__main__":
     parser.add_argument('--yolo_path', nargs='+', type=str,
                         default='models/yolov5s.pt', help='model.pt path')
     parser.add_argument('--video_path', type=str,
-                        default='inference/test_2fps.mp4', help='source video file')
+                        default='inference/test_2fps.mp4', help='source video file path')
+    parser.add_argument('--output_path', type=str,
+                        default='inference/output.mp4', help='output video file path')
     parser.add_argument('--label_names_path', type=str,
                         default='models/coco/coco.names', help='label enumerations path')
     parser.add_argument('--csv_path', type=str,
@@ -192,4 +181,4 @@ if __name__ == "__main__":
     opt = parser.parse_args()
 
     traffic = TrafficTracker()
-    traffic.run("inference/test.mp4")
+    traffic.run(opt.video_path)

@@ -112,10 +112,10 @@ def yolo_predict(yolov5, img, im0s):
 
             # Write results
             for *xyxy, conf, cls in reversed(det):
-                xywh = (xyxy2tlwh(torch.tensor(xyxy).view(1, 4))
+                tlwh = (xyxy2tlwh(torch.tensor(xyxy).view(1, 4))
                         ).view(-1).tolist()  # xywh
 
-                boxes.append(xywh)
+                boxes.append(tlwh)
                 class_inds.append(int(cls.item()))
                 scores.append(conf.item())
 
