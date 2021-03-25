@@ -11,7 +11,7 @@ from detections import *
 from yolov5.utils.datasets import letterbox
 #from app.database_connector import insert_to_table
 
-image_size = 416
+image_size = 640
 columns = ["created_time", "Pos_x", "Pos_y", "width",
            "height", "Class", "Object_id", "location_id"]
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
@@ -56,6 +56,7 @@ class TrafficTracker(Thread):
             frame_time = self.get_next_time(frame_time, self.vid_fps)
 
             for i, _ in enumerate(outputs):
+                outputs[i][0:4] = self.xywh_to_tlwh(outputs[i][0:4])
                 metrics.append({
                     "created_time": frame_time,
                     "Pos_x": outputs[i][0],
@@ -108,7 +109,7 @@ class TrafficTracker(Thread):
 
     @staticmethod
     def initialize_video_writer(output_path, fps, width, height):
-        codec = cv2.VideoWriter_fourcc(*'MP4V') # output_path must be .mp4
+        codec = cv2.VideoWriter_fourcc(*'H264') # output_path must be .mp4
         out = cv2.VideoWriter(output_path, codec, fps, (width, height))
         return codec, out
 
@@ -122,11 +123,11 @@ class TrafficTracker(Thread):
         return img
 
     @staticmethod
-    def xywh_to_xyxy(coor):
+    def xywh_to_tlwh(coor):
         w, h = coor[2], coor[3]
-        x1, y1 = max(coor[0]-w//2, 0), max(coor[1]-h//2, 0)
-        x2, y2 = x1 + w, y1 + h
-        return x1, y1, x2, y2
+        x = max(int(coor[0])-int(w)//2, 0)
+        y = max(int(coor[1])-int(h)//2, 0)
+        return x, y, w, h
 
     @staticmethod
     def xyxy_to_tlwh(bbox_xyxy):
@@ -171,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument('--yolo_path', nargs='+', type=str,
                         default='models/yolov5s.pt', help='model.pt path')
     parser.add_argument('--video_path', type=str,
-                        default='inference/test_2fps.mp4', help='source video file path')
+                        default='inference/test_10fps.mp4', help='source video file path')
     parser.add_argument('--output_path', type=str,
                         default='inference/output.mp4', help='output video file path')
     parser.add_argument('--label_names_path', type=str,
