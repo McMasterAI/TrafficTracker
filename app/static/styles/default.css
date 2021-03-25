@@ -1,10 +1,29 @@
 img {
     display: block;
-    margin-left: auto;
-    margin-right: auto;
-    width: 50%;
 }
 
 form {
     text-align: center;
+}
+
+tr {
+    text-align: left;
+}
+
+table.object_classes td{
+    padding-right: 20px;
+}
+
+.main_flex {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image_flex {
+
+}
+
+.form_flex {
+    align-content: center;
 }

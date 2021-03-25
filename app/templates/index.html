@@ -5,19 +5,29 @@
     <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/default.css') }}">
 </head>
 <body>
-    <img src="{{ url_for('send_heatmap_file', filename=image_filename) }}" alt="Heatmap Image">
-    <!-- <iframe src="{{ url_for('send_heatmap_file', filename=image_filename) }}"></iframe> -->
-    <form>
-        <select id="object_class">
-            <option>Car</option>
-            <option>Person</option>
-            <option>Bus</option>
-            <option>Truck</option>
-        </select>
-        <input id="date_start" type="date">
-        <input id="date_end" type="date">
-        <input type="submit" value="Submit">
-    </form>
 
+    <div class="main_flex">
+        <img class="image_flex" src="{{ url_for('send_heatmap_file', filename=image_filename) }}" alt="Heatmap Image">
+        <form class="form_flex" id="heatmap_query" action="" method="post">
+            <table class="object_classes">
+                {% for i in range(object_classes|length) %}
+                    {% if not i%2 %}
+                        <tr> 
+                    {% endif %}
+                    <td>
+                        <input type="checkbox" id="class_{{ object_classes[i].lower() }}" name="class_{{ object_classes[i].lower() }}" value="{{ object_classes[i] }}">
+                        <label for="class_{{ object_classes[i].lower() }}">{{ object_classes[i] }}</label>
+                    </td>
+                    {% if i%2 %}
+                        </tr> 
+                    {% endif %}
+                {% endfor %}
+            </table>
+            <input name="date_start" type="date">
+            <input name="date_end" type="date">
+            <input type="submit" value="Submit">
+        </form>
+    </div>
+   
 </body>
 </html>
