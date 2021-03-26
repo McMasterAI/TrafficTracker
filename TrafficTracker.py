@@ -70,7 +70,9 @@ class TrafficTracker(Thread):
             if len(outputs) > 0:
                 bbox_tlwh = outputs[:, :4]
                 identities = outputs[:, 4]
-                og_frame = self.draw_boxes(og_frame, bbox_tlwh, outputs[:][5][-1], identities)
+                classes = [i[-1] for i in outputs]
+                print(len(classes))
+                og_frame = self.draw_boxes(og_frame, bbox_tlwh, classes  , identities)
                 out.write(og_frame)
 
             _, og_frame = self.vid.read()  # BGR
@@ -86,11 +88,12 @@ class TrafficTracker(Thread):
         self.vid_height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.vid_fps = int(self.vid.get(cv2.CAP_PROP_FPS))
 
-    def draw_boxes(self, img, bbox, cl, identities=None):
+    def draw_boxes(self, img, bbox, classes, identities=None):
         for i, box in enumerate(bbox):
             x, y, w, h = [int(i) for i in box]
             # box text and bar
             id = int(identities[i]) if identities is not None else 0
+            cl = classes[i]
             color = self.compute_color_for_labels(id)
             label = '{}{:d}  {}'.format("", id,cl)
             t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 2, 2)[0]
