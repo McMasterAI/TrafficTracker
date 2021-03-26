@@ -71,7 +71,6 @@ class TrafficTracker(Thread):
                 bbox_tlwh = outputs[:, :4]
                 identities = outputs[:, 4]
                 classes = [i[-1] for i in outputs]
-                print(len(classes))
                 og_frame = self.draw_boxes(og_frame, bbox_tlwh, classes  , identities)
                 out.write(og_frame)
 
