@@ -1,15 +1,19 @@
 import pyodbc
 import pandas as pd
 import yaml
+import os
 
-with open("../config.yaml", 'r') as config_stream:
+config = "../config.yaml" if os.getcwd().split('/')[-1] == "app" else "config.yaml"
+drivers = [item for item in pyodbc.drivers()]
+driver = drivers[-1]
+
+with open(config, 'r') as config_stream:
     db_config = yaml.load(config_stream, Loader=yaml.BaseLoader)['heatmap_db_creds']
     server = db_config['server']
     database = db_config['database']
     username = db_config['username']
     password = db_config['password']
     port = str(db_config['port'])
-    driver = db_config['driver']
 connection_string= f'DRIVER={driver};SERVER={server};PORT={port};DATABASE={database};UID={username};PWD={password}'
 
 heatmap_default_column_order = ['heatmap_id', 'created_time', 'Pos_x', 'Pos_y', 
@@ -59,12 +63,23 @@ def describe_query_table(select_clause, table):
     return execute_raw_query(query).description
 
 def insert_to_table(table,filepath):
+    data = pd.read_csv(filepath)
+    df = pd.DataFrame(data,columns = ['created_time','Pos_x','Pos_y','width','height','Class','Object_id','location_id'])
     try:
-        load_sql = "LOAD DATA LOCAL INFILE" + filepath + "INTO TABLE" + table + "\ FIELDS TERMINATED BY ',' ENCLOSED BY '\"' IGNORE 1 LINES;"
-        print(load_sql)
         with pyodbc.connect(connection_string) as conn:
             with conn.cursor() as cursor:
-                cursor.execute(load_sql)
+                for row in df.itertuples():
+                    cursor.execute(''' 
+                                    INSERT INTO {0} (created_time,Pos_x,Pos_y,width,height,Class,Object_id,location_id) 
+                                    VALUES (?,?,?,?,?,?,?,?)  '''.format(table), 
+                                    row.created_time,
+                                    row.Pos_x,
+                                    row.Pos_y,
+                                    row.width,
+                                    row.height,
+                                    row.Class,
+                                    row.Object_id,
+                                    row.location_id )
                 conn.commit()
      
     except Exception as e:
