@@ -11,6 +11,8 @@ from detections import *
 from yolov5.utils.datasets import letterbox
 
 from tqdm import tqdm
+import logging
+from logutils import TqdmLoggingHandler
 
 
 #from app.database_connector import insert_to_table
@@ -35,6 +37,9 @@ class TrafficTracker(Thread):
 
         self.yolo = Load_Yolo_Model(track_only=desired_class_names,conf_thres=opt.confidence)
         self.deepsort = build_tracker(cfg, use_cuda=use_cuda)
+        self.log = logging.getLogger()
+        self.log.setLevel(logging.INFO)
+        self.log.addHandler(TqdmLoggingHandler())
         print("Initialized!")
 
     def run(self, video_path, start_time=time.time()):
@@ -46,14 +51,16 @@ class TrafficTracker(Thread):
         _, og_frame = self.vid.read()  # BGR
         
         metrics = []
+
         pbar = tqdm(total=self.length+1)
-        
+
+                
         while og_frame is not None:
             pbar.update()
             new_frame = self.preprocess_image(og_frame, opt.image_size)
 
             boxes, class_inds, scores = yolo_predict(
-                self.yolo, new_frame, og_frame)    
+                self.yolo, new_frame, og_frame,self.log)    
             # checks if there is an output, otherwise just keeps the original frame
             if boxes and class_inds and scores:
                 boxes = np.array([list(box) for box in boxes])
@@ -106,7 +113,7 @@ class TrafficTracker(Thread):
             cl = classes[i]
             color = self.compute_color_for_labels(id)
             label = '{}{:d}  {}'.format("", id,cl)
-            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 2, 2)[0]
+            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1, 1)[0]
             cv2.rectangle(img, (x, y), (x+w, y+h), color, 3)
             cv2.rectangle(
                 img, (x, y), (x+t_size[0]+3, y+t_size[1]+4), color, -1)
