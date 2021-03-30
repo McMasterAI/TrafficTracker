@@ -15,7 +15,7 @@
                         <tr> 
                     {% endif %}
                     <td>
-                        <input type="checkbox" id="class_{{ object_classes[i].lower() }}" name="class_{{ object_classes[i].lower() }}" value="{{ object_classes[i] }}">
+                        <input type="checkbox" name="class_{{ object_classes[i].lower() }}" value="{{ object_classes[i] }}" {{'checked' if object_classes[i].lower() in checked else ''}}>
                         <label for="class_{{ object_classes[i].lower() }}">{{ object_classes[i] }}</label>
                     </td>
                     {% if i%2 %}
