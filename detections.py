@@ -77,7 +77,7 @@ def plot_one_box_tlwh(x, img, color=None, label=None, line_thickness=None):
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
 
-def yolo_predict(yolov5, img, im0s):
+def yolo_predict(yolov5, img, im0s,log):
     img = torch.from_numpy(img).to(yolov5.device)
     img = img.half() if yolov5.is_half else img.float()  # uint8 to fp16/32
     img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -120,7 +120,7 @@ def yolo_predict(yolov5, img, im0s):
                 scores.append(conf.item())
 
         # Print time (inference + NMS)
-        print('%sDone. (%.3fs)' % (s, t2 - t1))
+        log.info('%sDone. (%.3fs)' % (s, t2 - t1))
 
     return boxes, class_inds, scores
 
