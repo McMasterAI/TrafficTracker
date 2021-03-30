@@ -9,6 +9,10 @@ from config_parser import get_config
 from deep_sort import build_tracker
 from detections import *
 from yolov5.utils.datasets import letterbox
+
+from tqdm import tqdm
+
+
 #from app.database_connector import insert_to_table
 
 columns = ["created_time", "Pos_x", "Pos_y", "width",
@@ -40,39 +44,44 @@ class TrafficTracker(Thread):
         _, out = self.initialize_video_writer(
             opt.output_path, self.vid_fps, self.vid_width, self.vid_height)
         _, og_frame = self.vid.read()  # BGR
-
+        
         metrics = []
+        pbar = tqdm(total=self.length+1)
+        
         while og_frame is not None:
+            pbar.update()
             new_frame = self.preprocess_image(og_frame, opt.image_size)
 
             boxes, class_inds, scores = yolo_predict(
-                self.yolo, new_frame, og_frame)
-            boxes = np.array([list(box) for box in boxes])
-            names = [self.class_names[name] for name in class_inds]
-            outputs = self.deepsort.update(boxes, names, scores, og_frame)
+                self.yolo, new_frame, og_frame)    
+            # checks if there is an output, otherwise just keeps the original frame
+            if boxes and class_inds and scores:
+                boxes = np.array([list(box) for box in boxes])
+                names = [self.class_names[name] for name in class_inds]
+                outputs = self.deepsort.update(boxes, names, scores, og_frame)
 
-            # Generate Metrics
-            frame_time = self.get_next_time(frame_time, self.vid_fps)
+                # Generate Metrics
+                frame_time = self.get_next_time(frame_time, self.vid_fps)
 
-            for i, _ in enumerate(outputs):
-                outputs[i][0:4] = self.xywh_to_tlwh(outputs[i][0:4])
-                metrics.append({
-                    "created_time": frame_time,
-                    "Pos_x": outputs[i][0],
-                    "Pos_y": outputs[i][1],
-                    "width": outputs[i][2],
-                    "height": outputs[i][3],
-                    "Class": outputs[i][5],
-                    "Object_id": outputs[i][4],
-                    "location_id": "McMaster University"
-                })
+                for i, _ in enumerate(outputs):
+                    outputs[i][0:4] = self.xywh_to_tlwh(outputs[i][0:4])
+                    metrics.append({
+                        "created_time": frame_time,
+                        "Pos_x": outputs[i][0],
+                        "Pos_y": outputs[i][1],
+                        "width": outputs[i][2],
+                        "height": outputs[i][3],
+                        "Class": outputs[i][5],
+                        "Object_id": outputs[i][4],
+                        "location_id": "McMaster University"
+                    })
 
-            if len(outputs) > 0:
-                bbox_tlwh = outputs[:, :4]
-                identities = outputs[:, 4]
-                classes = [i[-1] for i in outputs]
-                og_frame = self.draw_boxes(og_frame, bbox_tlwh, classes  , identities)
-                out.write(og_frame)
+                if len(outputs) > 0:
+                    bbox_tlwh = outputs[:, :4]
+                    identities = outputs[:, 4]
+                    classes = [i[-1] for i in outputs]
+                    og_frame = self.draw_boxes(og_frame, bbox_tlwh, classes  , identities)
+                    out.write(og_frame)
 
             _, og_frame = self.vid.read()  # BGR
 
@@ -86,6 +95,8 @@ class TrafficTracker(Thread):
         self.vid_width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.vid_height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.vid_fps = int(self.vid.get(cv2.CAP_PROP_FPS))
+        self.length = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))
+
 
     def draw_boxes(self, img, bbox, classes, identities=None):
         for i, box in enumerate(bbox):
