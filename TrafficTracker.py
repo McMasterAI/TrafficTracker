@@ -35,7 +35,7 @@ class TrafficTracker(Thread):
             opt.label_names_path, desired_classes=desired_classes)
         self.class_names = class_names
 
-        self.yolo = Load_Yolo_Model(track_only=desired_class_names,conf_thres=opt.confidence)
+        self.yolo = Load_Yolo_Model(track_only=desired_class_names,conf_thres=opt.confidence, weights=opt.yolo_path)
         self.deepsort = build_tracker(cfg, use_cuda=use_cuda)
         self.log = logging.getLogger()
         self.log.setLevel(logging.INFO)
