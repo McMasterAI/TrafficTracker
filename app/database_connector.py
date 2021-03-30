@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # just some example queries
     print(query_table('locations', ['location_id','longitude'], format='dataframe'))
     print(query_table('heatmap', ['*'], format='dataframe'))
-    print(query_table('heatmap', ['*'],where_clause='created_time BETWEEN 2018 AND 2021', format='dataframe'))
+    print(query_table('heatmap', ['*'],where_clause='created_time > 1616703380', format='dataframe'))
     for r in query_table('locations', ['*'],[], format='raw'):
         print(r.location_id.strip(), r.longitude.strip())        
     print(describe_query_table(['*'],'heatmap'))
