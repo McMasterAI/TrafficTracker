@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 from datetime import datetime
+from database_connector import query_table
 
 
 # custom modules
@@ -26,10 +27,8 @@ def home():
 # TODO: query endpoint instead of forced template state
 @app.route('/heatmap', methods=['POST','GET'])
 def _heatmap():
-    data_filename = os.path.join(app.config['DATA_FOLDER'], 'traffic_data2.csv')
     save_png_filename = 'heatmap.png'
 
-    data_points = get_data_points(data_filename)
     template_params = {
         "image_filename":save_png_filename,
         "object_classes":['Person','Bicycle','Car','Motorcycle','Bus','Truck'],
@@ -42,14 +41,17 @@ def _heatmap():
         object_classes = [object_class.lower() for object_class in list(request.form.values())[:-2]]
         start_date = request.form.get('date_start') 
         end_date = request.form.get('date_end')
-        grid_values = heatmap.points_to_grid_values(data_points, object_classes, [start_date, end_date])
+        data_points = get_data_points(object_classes)
+        grid_values = heatmap.points_to_grid_values(data_points)
         template_params["checked"] = object_classes
         template_params["start_date"] = start_date
-        template_params["end_date"] = end_date
+        template_params["end_date"] = end_date       
         
     else:
         default_objects_classes = ['truck','car','bus']
-        grid_values = heatmap.points_to_grid_values(data_points, default_objects_classes)
+        template_params["checked"] = default_objects_classes
+        data_points = get_data_points(default_objects_classes)
+        grid_values = heatmap.points_to_grid_values(data_points)
 
     heatmap.create(grid_values, os.path.join(app.config['IMG_FOLDER'], save_png_filename))  
     return render_template("index.html", **template_params)
@@ -58,9 +60,11 @@ def _heatmap():
 def send_heatmap_file(filename):
     return send_from_directory(app.config['IMG_FOLDER'], filename)
 
-def get_data_points(filename):
-    data = pd.read_csv(filename, names = ['created_time', 'Pos_x','Pos_y', 'width', 'height', 'Class', 'Object_id', 'location_id'])
-    data['created_time'] = data['created_time'].iloc[1:].astype(float)
+def get_data_points(object_classes=None):
+    where_clause = ''
+    if object_classes:
+        where_clause = "Class IN ( {} )".format(','.join('\''+class_name+'\'' for class_name in object_classes))
+    data = query_table('heatmap', ['*'], where_clause=where_clause, format='dataframe')
     return data
 
 if __name__ == '__main__':

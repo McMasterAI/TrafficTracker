@@ -40,11 +40,11 @@ def query_table(table, select_clause, where_clause=None, format='tuple'):
     with pyodbc.connect(connection_string) as conn:
         with conn.cursor() as cursor:
             if format == 'tuple':
-                result = [tuple(map(str.strip, row)) for row in cursor.execute(query)] #strips every attribute in every record
+                result = [tuple(e.strip() if type(e)==str else e for e in row) for row in cursor.execute(query)] #strips every attribute in every record
             elif format == 'raw':
                 result = cursor.execute(query).fetchall()
             elif format == 'dataframe':
-                result = [tuple(map(str.strip, row)) for row in cursor.execute(query)]
+                result = [tuple(e.strip() if type(e)==str else e for e in row) for row in cursor.execute(query)]
                 result = pd.DataFrame( result , columns=columns)
             else:
                 raise('Query output format does not exist')

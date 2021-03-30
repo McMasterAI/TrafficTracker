@@ -6,21 +6,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
-from datetime import datetime
-import time
 
-def points_to_grid_values(data, class_filter=None, date_filter=None):
-    filtered_data = data.loc[data['Class'].isin(class_filter)] if class_filter else data
+def points_to_grid_values(data):
 
-    if date_filter:
-        start_date = datetime.timestamp(datetime.strptime(date_filter[0], '%Y-%m-%d')) if date_filter[0] else 946702800.0 # Jan 1 2000
-        end_date = datetime.timestamp(datetime.strptime(date_filter[0], '%Y-%m-%d')) if date_filter[1] else time.time()
-        filtered_data = filtered_data[filtered_data['created_time'].between(start_date,end_date)]
-
-    x = [int(e) for e in filtered_data.Pos_x.to_list()[1:]]
-    y = [int(e) for e in filtered_data.Pos_y.to_list()[1:]]
-    w = [int(e) for e in filtered_data.width.to_list()[1:]]
-    h = [int(e) for e in filtered_data.height.to_list()[1:]]
+    x = [int(e) for e in data.Pos_x.to_list()[1:]]
+    y = [int(e) for e in data.Pos_y.to_list()[1:]]
+    w = [int(e) for e in data.width.to_list()[1:]]
+    h = [int(e) for e in data.height.to_list()[1:]]
 
     cell_size = 12
     width = 1920
