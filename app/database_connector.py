@@ -3,7 +3,7 @@ import pandas as pd
 import yaml
 import os
 
-config = "../config.yaml" if os.getcwd().split('/')[-1] == "app" else "config.yaml"
+config = "../config.yaml" if "app" in os.getcwd() else "config.yaml"
 drivers = [item for item in pyodbc.drivers()]
 driver = drivers[-1]
 
