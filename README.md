@@ -44,6 +44,12 @@ Running the tracker:
 ```
 python TrafficTracker.py --video_path path/to/file.mp4
 ```
+Running the Flask App (Heatmap Visualization):
+```
+cd app/
+python flask_heatmap.py
+```
+Go to your browser and enter `localhost:5000/heatmap`
 
 Running the container on Jetson Nano:
 ```
