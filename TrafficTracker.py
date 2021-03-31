@@ -92,6 +92,10 @@ class TrafficTracker(Thread):
 
             _, og_frame = self.vid.read()  # BGR
 
+        end_time = time.time()
+        total_fps = (self.length + 1)/(end_time - start_time)
+        self.log.info("Average {:.2f} it/s ".format(total_fps))
+
         self.vid.release()
         out.release()
         save_csv(columns, metrics, opt.csv_path)
