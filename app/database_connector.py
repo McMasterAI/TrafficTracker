@@ -86,7 +86,6 @@ def insert_to_table(table,filepath):
         print("Error: {}".format(str(e)))
                 
 
-
 if __name__ == "__main__":
     # just some example queries
     print(query_table('locations', ['location_id','longitude'], format='dataframe'))

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.mp4
+*.pt
 # C extensions
 *.so
 
@@ -136,6 +137,3 @@ dmypy.json
 
 # Mac Stuff
 .DS_Store
-
-#generated outputs file
-detection.mp4
