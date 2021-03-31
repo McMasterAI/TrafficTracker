@@ -33,15 +33,23 @@ Many of the systems that exist do not put an emphasis on privacy and that is why
 # Getting Started
 Coming soon...
 ## Prerequisites
+Python **3.8.x** or newer (**64-bit** installation required)
 ## Installation
-
+```
+pip install -r requirements.txt
+```
+Ensure that you are using the pip associated with Python 3.8.x
 # Usage
 Running the tracker:
 ```
-python deep_sort.py --source 0  # webcam
-                             file.mp4  # video
-                             path/to/file.mp4
+python TrafficTracker.py --video_path path/to/file.mp4
 ```
+Running the Flask App (Heatmap Visualization):
+```
+cd app/
+python flask_heatmap.py
+```
+Go to your browser and enter `localhost:5000/heatmap`
 
 Running the container on Jetson Nano:
 ```

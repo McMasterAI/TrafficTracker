@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Heatmap</title>
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/default.css') }}">
+</head>
+<body>
+
+    <div class="main_flex">
+        <img class="image_flex" src="{{ url_for('send_heatmap_file', filename=image_filename) }}" alt="Heatmap Image">
+        <form class="form_flex" id="heatmap_query" action="" method="post">
+            <table class="object_classes">
+                {% for i in range(object_classes|length) %}
+                    {% if not i%2 %}
+                        <tr> 
+                    {% endif %}
+                    <td>
+                        <input type="checkbox" name="class_{{ object_classes[i].lower() }}" value="{{ object_classes[i] }}" {{'checked' if object_classes[i].lower() in checked else ''}}>
+                        <label for="class_{{ object_classes[i].lower() }}">{{ object_classes[i] }}</label>
+                    </td>
+                    {% if i%2 %}
+                        </tr> 
+                    {% endif %}
+                {% endfor %}
+            </table>
+            <input name="date_start" type="date" value="{{ start_date }}">
+            <input name="date_end" type="date" value="{{ end_date }}">
+            <input type="submit" value="Submit">
+        </form>
+    </div>
+   
+</body>
+</html>
