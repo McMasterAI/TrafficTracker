@@ -1,12 +1,14 @@
 # add alpha (transparency) to a colormap
 import matplotlib; matplotlib.use('Agg')
-from matplotlib.colors import LinearSegmentedColormap 
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 import matplotlib.image as mpimg 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import numpy as np
 
 def points_to_grid_values(data):
+
     x = [int(e) for e in data.Pos_x.to_list()[1:]]
     y = [int(e) for e in data.Pos_y.to_list()[1:]]
     w = [int(e) for e in data.width.to_list()[1:]]
@@ -14,7 +16,8 @@ def points_to_grid_values(data):
 
     cell_size = 12
     width = 1920
-    height = 1920   # bug with grid lines
+    height = 1080   # bug with grid lines
+    # map_factor = max(width,height) / min(width,height)
 
     adjusted_width = width//cell_size
     adjusted_height = height//cell_size
@@ -24,6 +27,8 @@ def points_to_grid_values(data):
         for col in range(x[i]//cell_size, (x[i]+w[i])//cell_size):
             for row in range(y[i]//cell_size, (y[i]+h[i])//cell_size):
                 if (row < adjusted_height and col < adjusted_width): 
+                    # adjusted_row = min(int(row*map_factor), max(width,height)//cell_size-1)
+                    # print(adjusted_row)
                     heatmap_data[row][col] += 1
     return heatmap_data
 
@@ -37,31 +42,35 @@ def create(heatmap_data, filename=None):
 #     al_winter = LinearSegmentedColormap('AlphaWinter', wd)
 
     fig = plt.figure()
-    hmax = sns.heatmap(
-        heatmap_data,
-        # cmap = "winter", # cm name or object
-        alpha = 0.5, # whole heatmap is translucent
-        annot = False,
-        zorder = 2,
-        xticklabels = False,
-        yticklabels = False,
-        cbar=False,
-        square=True)
-    # sns.axes_style("white")
-    # sns.heatmap(
-    #     heatmap_data,
+    plt.imshow(
+        heatmap_data, 
+        alpha=0.3,
+        zorder=2,
+        )
+    plt.axis('off')
+
+    # plt.show()
+    # hmax = sns.heatmap(
+    #     heatmap_data, 
+    #     # cmap=get_alpha_blend_cmap("rocket_r", 0.5), 
+    #     alpha = 0.3, # whole heatmap is translucent
+    #     annot = False,
     #     zorder = 2,
-    #     xticklabels=False,
-    #     yticklabels=False,
+    #     xticklabels = False,
+    #     yticklabels = False,
     #     cbar=False,
+    #     linewidths=0.0,
+    #     edgecolor="none",
     #     square=True)
 
-    map_img = mpimg.imread('./imgs/intersection2.jpeg') 
-    hmax.imshow(
+    map_img = mpimg.imread('./imgs/streetView.png') 
+    plt.imshow(
         map_img,
-        aspect = hmax.get_aspect(),
-        extent = hmax.get_xlim() + hmax.get_ylim(),
+        # aspect = plt.get_aspect(),
+        # extent = plt.get_xlim() + plt.get_ylim(),
+        extent=[0,len(heatmap_data[0])] + [len(heatmap_data),0],
         zorder = 1) #put the map under the heatmap
 
+    # fig.savefig(filename, dpi=1000) # higer dpi is slow saving
     fig.savefig(filename)
     plt.close(fig)
