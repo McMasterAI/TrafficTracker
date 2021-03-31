@@ -86,26 +86,8 @@ def insert_to_table(table,filepath):
         print("Error: {}".format(str(e)))
                 
 
-
-def insert_to_table(table,filepath):
-    try:
-        load_sql = "LOAD DATA LOCAL INFILE" + filepath + "INTO TABLE" + table + "\ FIELDS TERMINATED BY ',' ENCLOSED BY '\"' IGNORE 1 LINES;"
-        print(load_sql)
-        with pyodbc.connect(connection_string) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(load_sql)
-                conn.commit()
-     
-    except Exception as e:
-        print("Error: {}".format(str(e)))
-                
-
-
-
 if __name__ == "__main__":
     # just some example queries
-    print(insert_to_table("poop", "peep"))
- 
     print(query_table('locations', ['location_id','longitude'], format='dataframe'))
     print(query_table('heatmap', ['*'], format='dataframe'))
     print(query_table('heatmap', ['*'],where_clause='created_time > 1616703380', format='dataframe'))
