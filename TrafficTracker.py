@@ -9,9 +9,14 @@ from config_parser import get_config
 from deep_sort import build_tracker
 from detections import *
 from yolov5.utils.datasets import letterbox
+
+from tqdm import tqdm
+import logging
+from logutils import TqdmLoggingHandler
+
+
 #from app.database_connector import insert_to_table
 
-image_size = 640
 columns = ["created_time", "Pos_x", "Pos_y", "width",
            "height", "Class", "Object_id", "location_id"]
 palette = (2 ** 11 - 1, 2 ** 15 - 1, 2 ** 20 - 1)
@@ -30,8 +35,11 @@ class TrafficTracker(Thread):
             opt.label_names_path, desired_classes=desired_classes)
         self.class_names = class_names
 
-        self.yolo = Load_Yolo_Model(track_only=desired_class_names)
+        self.yolo = Load_Yolo_Model(track_only=desired_class_names,conf_thres=opt.confidence, weights=opt.yolo_path)
         self.deepsort = build_tracker(cfg, use_cuda=use_cuda)
+        self.log = logging.getLogger()
+        self.log.setLevel(logging.INFO)
+        self.log.addHandler(TqdmLoggingHandler())
         print("Initialized!")
 
     def run(self, video_path, start_time=time.time()):
@@ -41,38 +49,46 @@ class TrafficTracker(Thread):
         _, out = self.initialize_video_writer(
             opt.output_path, self.vid_fps, self.vid_width, self.vid_height)
         _, og_frame = self.vid.read()  # BGR
-
+        
         metrics = []
+
+        pbar = tqdm(total=self.length+1)
+
+                
         while og_frame is not None:
-            new_frame = self.preprocess_image(og_frame, image_size)
+            pbar.update()
+            new_frame = self.preprocess_image(og_frame, opt.image_size)
 
             boxes, class_inds, scores = yolo_predict(
-                self.yolo, new_frame, og_frame)
-            boxes = np.array([list(box) for box in boxes])
-            names = [self.class_names[name] for name in class_inds]
-            outputs = self.deepsort.update(boxes, names, scores, og_frame)
+                self.yolo, new_frame, og_frame,self.log)    
+            # checks if there is an output, otherwise just keeps the original frame
+            if boxes and class_inds and scores:
+                boxes = np.array([list(box) for box in boxes])
+                names = [self.class_names[name] for name in class_inds]
+                outputs = self.deepsort.update(boxes, names, scores, og_frame)
 
-            # Generate Metrics
-            frame_time = self.get_next_time(frame_time, self.vid_fps)
+                # Generate Metrics
+                frame_time = self.get_next_time(frame_time, self.vid_fps)
 
-            for i, _ in enumerate(outputs):
-                outputs[i][0:4] = self.xywh_to_tlwh(outputs[i][0:4])
-                metrics.append({
-                    "created_time": frame_time,
-                    "Pos_x": outputs[i][0],
-                    "Pos_y": outputs[i][1],
-                    "width": outputs[i][2],
-                    "height": outputs[i][3],
-                    "Class": outputs[i][5],
-                    "Object_id": outputs[i][4],
-                    "location_id": "McMaster University"
-                })
+                for i, _ in enumerate(outputs):
+                    outputs[i][0:4] = self.xywh_to_tlwh(outputs[i][0:4])
+                    metrics.append({
+                        "created_time": frame_time,
+                        "Pos_x": outputs[i][0],
+                        "Pos_y": outputs[i][1],
+                        "width": outputs[i][2],
+                        "height": outputs[i][3],
+                        "Class": outputs[i][5],
+                        "Object_id": outputs[i][4],
+                        "location_id": "McMaster University"
+                    })
 
-            if len(outputs) > 0:
-                bbox_tlwh = outputs[:, :4]
-                identities = outputs[:, 4]
-                og_frame = self.draw_boxes(og_frame, bbox_tlwh, identities)
-                out.write(og_frame)
+                if len(outputs) > 0:
+                    bbox_tlwh = outputs[:, :4]
+                    identities = outputs[:, 4]
+                    classes = [i[-1] for i in outputs]
+                    og_frame = self.draw_boxes(og_frame, bbox_tlwh, classes  , identities)
+                    out.write(og_frame)
 
             _, og_frame = self.vid.read()  # BGR
 
@@ -86,15 +102,18 @@ class TrafficTracker(Thread):
         self.vid_width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.vid_height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.vid_fps = int(self.vid.get(cv2.CAP_PROP_FPS))
+        self.length = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    def draw_boxes(self, img, bbox, identities=None):
+
+    def draw_boxes(self, img, bbox, classes, identities=None):
         for i, box in enumerate(bbox):
             x, y, w, h = [int(i) for i in box]
             # box text and bar
             id = int(identities[i]) if identities is not None else 0
+            cl = classes[i]
             color = self.compute_color_for_labels(id)
-            label = '{}{:d}'.format("", id)
-            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 2, 2)[0]
+            label = '{}{:d}  {}'.format("", id,cl)
+            t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1, 1)[0]
             cv2.rectangle(img, (x, y), (x+w, y+h), color, 3)
             cv2.rectangle(
                 img, (x, y), (x+t_size[0]+3, y+t_size[1]+4), color, -1)
@@ -179,6 +198,10 @@ if __name__ == "__main__":
                         default='models/coco/coco.names', help='label enumerations path')
     parser.add_argument('--csv_path', type=str,
                         default='traffic_data.csv', help='save path for output csv')
+    parser.add_argument('--image_size', type=int,
+                        default=640, help='height for the resolution to downscale video frames to')
+    parser.add_argument('--confidence', type=float,
+                        default=0.25, help='Confidence threshold for yolo classifier as a percentage from 0 to 1')
     opt = parser.parse_args()
 
     traffic = TrafficTracker()
