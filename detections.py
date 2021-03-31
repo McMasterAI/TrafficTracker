@@ -23,7 +23,7 @@ from yolov5.utils.torch_utils import select_device, time_synchronized
 sys.path.insert(0, './yolov5')
 
 
-def Load_Yolo_Model(device=select_device(''), conf_thres=0.25, iou_thres=0.45, weights='models/yolov5s.pt', 
+def Load_Yolo_Model(device=select_device(''), conf_thres=0.51, iou_thres=0.45, weights='models/yolov5s.pt', 
     imgsz=640, track_only=[]):
     """Save a yolo model object.
     Args:
@@ -77,7 +77,7 @@ def plot_one_box_tlwh(x, img, color=None, label=None, line_thickness=None):
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
 
-def yolo_predict(yolov5, img, im0s):
+def yolo_predict(yolov5, img, im0s,log):
     img = torch.from_numpy(img).to(yolov5.device)
     img = img.half() if yolov5.is_half else img.float()  # uint8 to fp16/32
     img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -112,15 +112,15 @@ def yolo_predict(yolov5, img, im0s):
 
             # Write results
             for *xyxy, conf, cls in reversed(det):
-                xywh = (xyxy2tlwh(torch.tensor(xyxy).view(1, 4))
+                tlwh = (xyxy2tlwh(torch.tensor(xyxy).view(1, 4))
                         ).view(-1).tolist()  # xywh
 
-                boxes.append(xywh)
+                boxes.append(tlwh)
                 class_inds.append(int(cls.item()))
                 scores.append(conf.item())
 
         # Print time (inference + NMS)
-        print('%sDone. (%.3fs)' % (s, t2 - t1))
+        log.info('%sDone. (%.3fs)' % (s, t2 - t1))
 
     return boxes, class_inds, scores
 
