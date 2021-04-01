@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+from PIL import Image
+
+img_filename = './imgs/streetView.png'
 
 def points_to_grid_values(data):
 
@@ -14,10 +17,9 @@ def points_to_grid_values(data):
     w = [int(e) for e in data.width.to_list()[1:]]
     h = [int(e) for e in data.height.to_list()[1:]]
 
+    im = Image.open(img_filename)
+    width, height = im.size
     cell_size = 12
-    width = 1920
-    height = 1080   # bug with grid lines
-    # map_factor = max(width,height) / min(width,height)
 
     adjusted_width = width//cell_size
     adjusted_height = height//cell_size
@@ -27,9 +29,17 @@ def points_to_grid_values(data):
         for col in range(x[i]//cell_size, (x[i]+w[i])//cell_size):
             for row in range(y[i]//cell_size, (y[i]+h[i])//cell_size):
                 if (row < adjusted_height and col < adjusted_width): 
-                    # adjusted_row = min(int(row*map_factor), max(width,height)//cell_size-1)
-                    # print(adjusted_row)
                     heatmap_data[row][col] += 1
+
+    # # data trimming
+    # target = max([max(row) for row in heatmap_data])
+    # for i in range(len(heatmap_data)):
+    #     for j in range(len(heatmap_data[i])):
+    #         if heatmap_data[i][j] > 0.70*target:
+    #             heatmap_data[i][j] = 0
+    #         if heatmap_data[i][j] < 0.4*target:
+    #             heatmap_data[i][j] *=2
+
     return heatmap_data
 
 # TODO: remove chart numbers/ grid
@@ -49,28 +59,11 @@ def create(heatmap_data, filename=None):
         )
     plt.axis('off')
 
-    # plt.show()
-    # hmax = sns.heatmap(
-    #     heatmap_data, 
-    #     # cmap=get_alpha_blend_cmap("rocket_r", 0.5), 
-    #     alpha = 0.3, # whole heatmap is translucent
-    #     annot = False,
-    #     zorder = 2,
-    #     xticklabels = False,
-    #     yticklabels = False,
-    #     cbar=False,
-    #     linewidths=0.0,
-    #     edgecolor="none",
-    #     square=True)
-
-    map_img = mpimg.imread('./imgs/streetView.png') 
+    map_img = mpimg.imread(img_filename) 
     plt.imshow(
         map_img,
-        # aspect = plt.get_aspect(),
-        # extent = plt.get_xlim() + plt.get_ylim(),
         extent=[0,len(heatmap_data[0])] + [len(heatmap_data),0],
         zorder = 1) #put the map under the heatmap
-
-    # fig.savefig(filename, dpi=1000) # higer dpi is slow saving
+        
     fig.savefig(filename)
     plt.close(fig)
