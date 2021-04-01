@@ -59,7 +59,7 @@ def create(heatmap_data, filename=None):
         )
     plt.axis('off')
 
-    map_img = mpimg.imread(filename if filename else img_filename) 
+    map_img = mpimg.imread(img_filename) 
     plt.imshow(
         map_img,
         extent=[0,len(heatmap_data[0])] + [len(heatmap_data),0],
