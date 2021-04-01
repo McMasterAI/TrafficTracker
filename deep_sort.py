@@ -152,7 +152,7 @@ class TrafficTracker:
             img = self.preprocess_image(frame, self.image_size)
 
             t1 = time.time()
-            boxes, class_inds, scores = yolo_predict(self.yolo, img, frame)
+            boxes, class_inds, scores = yolo_predict(self.yolo, img, frame, None)
             t2 = time.time()
             names = []
             for clss in class_inds:

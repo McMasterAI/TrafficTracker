@@ -60,7 +60,7 @@ class TrafficTracker(Thread):
             new_frame = self.preprocess_image(og_frame, opt.image_size)
 
             boxes, class_inds, scores = yolo_predict(
-                self.yolo, new_frame, og_frame,self.log)    
+                self.yolo, new_frame, og_frame,self.log) # outputs boxes in tlwh format
             # checks if there is an output, otherwise just keeps the original frame
             if boxes and class_inds and scores:
                 boxes = np.array([list(box) for box in boxes])
@@ -71,7 +71,7 @@ class TrafficTracker(Thread):
                 frame_time = self.get_next_time(frame_time, self.vid_fps)
 
                 for i, _ in enumerate(outputs):
-                    outputs[i][0:4] = self.xywh_to_tlwh(outputs[i][0:4])
+                    #outputs are in format tlwh
                     metrics.append({
                         "created_time": frame_time,
                         "Pos_x": outputs[i][0],
